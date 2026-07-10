@@ -356,7 +356,7 @@ const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
 const DURATION_OPTS = ['—', '1 Month', '2 Months', '3 Months', '6 Months', '12 Months'];
 const CLOSURE_OPTS = ['—', 'Yes', 'No'];
 const YN_OPTS = ['—', 'Yes', 'No'];
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => dateStr(new Date());
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {
   day: '2-digit',
   month: 'short',
@@ -414,6 +414,18 @@ function intentBadge(i) {
     className: "badge badge-gray"
   }, "—");
 }
+// Spread onto a non-native clickable element (div acting as a button) alongside its
+// onClick, so keyboard-only users can reach it with Tab and activate it with Enter/Space.
+const kbd = handler => ({
+  role: 'button',
+  tabIndex: 0,
+  onKeyDown: e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handler(e);
+    }
+  }
+});
 function initLayerB() {
   return {
     connectedRetention: '—',
@@ -448,7 +460,8 @@ function getCredentials() {
       if (parsed.sheetId && parsed.apiKey && parsed.proxyUrl) return parsed;
     }
   } catch {}
-  // Fallback to baked-in defaults
+  // Baked-in defaults — deliberate: everyone on the team gets a working tracker with
+  // zero setup, at the cost of these being visible to anyone who reads this file.
   return {
     sheetId:  '1dAH4vEQbUAaqSSQ0aMAyq6gITv15yTiUk4Ktz9J8Q50',
     apiKey:   'AIzaSyCCLHheyLj-1Gk4NOsoC3jgyCgDFbJmybk',
@@ -468,6 +481,7 @@ const LB_COLS = ['AdvertiserID', 'connectedRetention', 'disposition', 'demoBooke
 function lbToRow(id, b) {
   return LB_COLS.map(c => c === 'AdvertiserID' ? id : c === 'remarks' ? JSON.stringify(b.remarks || []) : b[c] || '');
 }
+const LB_ENUM_FIELDS = new Set(['connectedRetention', 'disposition', 'demoStatus', 'intent', 'durationPitched', 'paymentLinkSent', 'closure']);
 function rowToLb(row) {
   const b = initLayerB();
   LB_COLS.forEach((c, i) => {
@@ -478,7 +492,7 @@ function rowToLb(row) {
       } catch {
         b.remarks = [];
       }
-    } else b[c] = row[i] || (c.startsWith('disposition') || c.startsWith('connected') || c.startsWith('intent') || c.startsWith('demoStatus') || c.startsWith('durationPitched') || c.startsWith('paymentLinkSent') || c.startsWith('closure') ? '—' : '');
+    } else b[c] = row[i] || (LB_ENUM_FIELDS.has(c) ? '—' : '');
   });
   return b;
 }
@@ -565,109 +579,66 @@ async function sheetReadSellers() {
 }
 async function sheetWriteRow(id, b, existingRowIndex) {
   const row = lbToRow(id, b);
-  const r = await fetch(PROXY_URL(), {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: {'Content-Type': 'text/plain'},
-    body: JSON.stringify({
-      action: 'write',
-      id,
-      row,
-      headers: LB_COLS
-    })
+  const body = JSON.stringify({
+    action: 'write',
+    id,
+    row,
+    headers: LB_COLS
   });
-  if (!r.ok) throw new Error(`Proxy error: ${r.status}`);
-  const data = await r.json();
-  if (!data.ok) throw new Error(data.error || 'Write failed');
+  try {
+    const r = await fetch(PROXY_URL(), {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body
+    });
+    if (!r.ok) throw new Error(`Proxy error: ${r.status}`);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Write failed');
+  } catch (e) {
+    if (e instanceof TypeError) {
+      // Network/CORS-level failure (not an HTTP error response) — the Apps Script proxy
+      // often doesn't return readable CORS headers even though the write itself lands.
+      // Fire a best-effort opaque request instead of surfacing a false failure to the user.
+      await fetch(PROXY_URL(), { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body }).catch(() => {});
+      return;
+    }
+    throw e;
+  }
 }
 async function sheetEnsureHeader() {
   // Header is now written by the Apps Script proxy on first write — no-op here
 }
-async function proxyWriteAccounts(accounts) {
-  try {
-    await fetch(PROXY_URL(), {
-      method: 'POST', mode: 'no-cors',
-      headers: {'Content-Type': 'text/plain'},
-      body: JSON.stringify({ action: 'writeAccounts', accounts }),
-    });
-  } catch(e) { console.warn('Account sync failed:', e); }
-}
+// No real access control is possible from a static, client-side file — this passcode
+// is only a soft deterrent against accidental clicks into Config/CSV upload, not security.
+// Change it by editing this constant directly in source.
+const ADMIN_PASS = 'QWer12@#';
 
-async function proxyReadAccounts() {
-  try {
-    const r = await fetch(PROXY_URL() + '?action=readAccounts', { mode: 'cors' });
-    if (!r.ok) return null;
-    const data = await r.json();
-    return data.accounts || null;
-  } catch(e) { return null; }
-}
-
-// ─── ACCOUNT STORE (persisted in localStorage) ───────────────────────────────
-const DEFAULT_ACCOUNTS = [{
-  id: 'admin-root',
-  role: 'admin',
-  name: 'Admin',
-  pass: 'admin123'
-}, {
-  id: 'sales-default',
-  role: 'sales',
-  name: 'Sales',
-  pass: 'sales123'
-}];
-const AM_PASS = 'am123';
-function loadAccounts() {
-  try {
-    const raw = localStorage.getItem('sg_accounts');
-    if (raw) {
-      // Remove any legacy am-default entries — AMs now come from Sheet
-      const parsed = JSON.parse(raw).filter(a => !(a.role === 'am'));
-      return parsed.length ? parsed : DEFAULT_ACCOUNTS;
-    }
-  } catch {}
-  return DEFAULT_ACCOUNTS;
-}
-function saveAccounts(accs) {
-  localStorage.setItem('sg_accounts', JSON.stringify(accs));
-  proxyWriteAccounts(accs); // also sync to Sheet for cross-device access
-}
-function genId() {
-  return Math.random().toString(36).slice(2, 10);
-}
 async function fetchAMNamesFromSheet() {
   const sid = SHEET_ID();
   const key = API_KEY();
   if (!sid || !key) throw new Error('NO_CREDS');
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Sheet1!C:C?key=${key}`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error('FETCH_FAILED');
   const data = await r.json();
   if (data.error) throw new Error(data.error.message);
+  if (!r.ok) throw new Error(`Request failed (${r.status})`);
   const rows = data.values || [];
   if (rows.length < 2) return [];
   return [...new Set(rows.slice(1).map(r => r[0]).filter(Boolean).sort())];
 }
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 function Login({
   onLogin
 }) {
-  const [accounts, setAccounts] = useState(loadAccounts);
   const [role, setRole] = useState('am');
-  const [pass, setPass] = useState('');
   const [amName, setAmName] = useState('');
-  const [salesName, setSalesName] = useState('');
+  const [adminPass, setAdminPass] = useState('');
   const [err, setErr] = useState('');
   const [sheetAMNames, setSheetAMNames] = useState([]);
   const [loadingNames, setLoadingNames] = useState(true);
   const [namesFetchErr, setNamesFetchErr] = useState(null);
-
-  // Admin account manager state
-  const [adminPass, setAdminPass] = useState('');
-  const [adminUnlocked, setAdminUnlocked] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [newRole, setNewRole] = useState('sales');
-  const [mgmtMsg, setMgmtMsg] = useState(null);
 
   const doFetchNames = () => {
     setLoadingNames(true);
@@ -676,311 +647,30 @@ function Login({
       .then(names => { setSheetAMNames(names); setLoadingNames(false); })
       .catch(e => {
         setLoadingNames(false);
-        setNamesFetchErr(e.message === 'NO_CREDS' ? 'no_creds' : 'failed');
+        setNamesFetchErr(e.message === 'NO_CREDS' ? 'no_creds' : e.message || 'failed');
       });
   };
 
   useEffect(() => {
     doFetchNames();
-    proxyReadAccounts().then(remote => {
-      if (remote && remote.length) {
-        const filtered = remote.filter(a => a.role !== 'am');
-        if (filtered.length) { setAccounts(filtered); localStorage.setItem('sg_accounts', JSON.stringify(filtered)); }
-      }
-    }).catch(() => {});
   }, []);
-  const adminAccount = accounts.find(a => a.role === 'admin');
-  const flash = (msg, ok = true) => {
-    setMgmtMsg({
-      text: msg,
-      ok
-    });
-    setTimeout(() => setMgmtMsg(null), 2500);
-  };
-  const submit = () => {
+
+  const selectRole = r => {
+    if (r === 'sales') { onLogin('sales', 'Sales'); return; }
+    setRole(r);
     setErr('');
-    if (role === 'am') {
-      if (!amName) {
-        setErr('Select your name');
-        return;
-      }
-      if (pass !== AM_PASS) {
-        setErr('Incorrect passcode');
-        return;
-      }
-      onLogin('am', amName);
-      return;
-    }
-    const match = accounts.find(a => a.role === role && a.pass === pass);
-    if (!match) {
-      setErr('Incorrect passcode');
-      return;
-    }
-    if (role === 'sales' && !salesName) {
-      setErr('Select your name');
-      return;
-    }
-    onLogin(role, role === 'sales' ? salesName : match.name);
+    setAmName('');
+    setAdminPass('');
   };
-  const unlockAdmin = () => {
-    if (!adminAccount || adminPass !== adminAccount.pass) {
-      setErr('Incorrect admin passcode');
-      return;
-    }
-    setAdminUnlocked(true);
-    setErr('');
+  const pickAM = name => {
+    setAmName(name);
+    if (name) onLogin('am', name);
   };
-  const addAccount = () => {
-    if (!newName.trim()) {
-      flash('Enter a name', false);
-      return;
-    }
-    if (!newPass.trim() || newPass.length < 4) {
-      flash('Passcode must be at least 4 characters', false);
-      return;
-    }
-    const dup = accounts.find(a => a.role === newRole && a.name.toLowerCase() === newName.trim().toLowerCase());
-    if (dup) {
-      flash('Name already exists for this role', false);
-      return;
-    }
-    const updated = [...accounts, {
-      id: genId(),
-      role: newRole,
-      name: newName.trim(),
-      pass: newPass.trim()
-    }];
-    setAccounts(updated);
-    saveAccounts(updated);
-    setNewName('');
-    setNewPass('');
-    flash(`Account "${newName.trim()}" created`);
+  const submitAdmin = () => {
+    if (adminPass !== ADMIN_PASS) { setErr('Incorrect passcode'); return; }
+    onLogin('admin', 'Admin');
   };
-  const deleteAccount = id => {
-    if (id === 'admin-root') {
-      flash('Cannot delete the root admin', false);
-      return;
-    }
-    const updated = accounts.filter(a => a.id !== id);
-    setAccounts(updated);
-    saveAccounts(updated);
-    flash('Account deleted');
-  };
-  const changePass = (id, np) => {
-    if (!np || np.length < 4) {
-      flash('Passcode must be at least 4 characters', false);
-      return;
-    }
-    const updated = accounts.map(a => a.id === id ? {
-      ...a,
-      pass: np
-    } : a);
-    setAccounts(updated);
-    saveAccounts(updated);
-    flash('Passcode updated');
-  };
-  const roleColor = {
-    sales: '#166534',
-    admin: '#6b21a8'
-  };
-  const roleBg = {
-    sales: '#f0fdf4',
-    admin: '#faf5ff'
-  };
-  const salesAccounts = accounts.filter(a => a.role === 'sales');
-  if (adminUnlocked) {
-    return /*#__PURE__*/React.createElement("div", {
-      className: "login-wrap"
-    }, /*#__PURE__*/React.createElement("div", {
-      className: "login-card",
-      style: {
-        width: 520,
-        padding: '32px 36px'
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 20
-      }
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      className: "login-logo"
-    }, "SellerGeni"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 16,
-        fontWeight: 600,
-        color: '#111'
-      }
-    }, "Account Manager")), /*#__PURE__*/React.createElement("button", {
-      className: "btn btn-ghost btn-sm",
-      onClick: () => {
-        setAdminUnlocked(false);
-        setAdminPass('');
-        setErr('');
-      }
-    }, "← Back to login")), mgmtMsg && /*#__PURE__*/React.createElement("div", {
-      style: {
-        padding: '8px 12px',
-        borderRadius: 5,
-        marginBottom: 14,
-        fontSize: 12,
-        fontWeight: 600,
-        background: mgmtMsg.ok ? '#f0fdf4' : '#fef2f2',
-        border: `1px solid ${mgmtMsg.ok ? '#bbf7d0' : '#fecaca'}`,
-        color: mgmtMsg.ok ? '#166534' : '#dc2626'
-      }
-    }, mgmtMsg.ok ? '✓' : '✕', " ", mgmtMsg.text), /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: '#eff6ff',
-        border: '1px solid #bfdbfe',
-        borderRadius: 7,
-        padding: 12,
-        marginBottom: 16
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        fontWeight: 700,
-        color: '#1d4ed8',
-        marginBottom: 3
-      }
-    }, "Account Managers — ", sheetAMNames.length, " loaded from Sheet"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11.5,
-        color: '#3b5bdb',
-        lineHeight: 1.6
-      }
-    }, "AM names are read directly from your Google Sheet. All AMs use passcode", ' ', /*#__PURE__*/React.createElement("code", {
-      style: {
-        background: '#dbeafe',
-        padding: '1px 5px',
-        borderRadius: 3,
-        fontFamily: 'JetBrains Mono',
-        fontSize: 11
-      }
-    }, "am123"), ". No account creation needed.")), /*#__PURE__*/React.createElement("div", {
-      style: {
-        background: '#fafafa',
-        border: '1px solid #e5e5e5',
-        borderRadius: 7,
-        padding: 16,
-        marginBottom: 18
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 10,
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        color: '#999',
-        marginBottom: 12
-      }
-    }, "Add Sales / Admin account"), /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        gap: 8,
-        marginBottom: 8
-      }
-    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#999',
-        marginBottom: 4
-      }
-    }, "Role"), /*#__PURE__*/React.createElement("select", {
-      className: "form-control",
-      value: newRole,
-      onChange: e => setNewRole(e.target.value)
-    }, /*#__PURE__*/React.createElement("option", {
-      value: "sales"
-    }, "Sales"), /*#__PURE__*/React.createElement("option", {
-      value: "admin"
-    }, "Admin"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#999',
-        marginBottom: 4
-      }
-    }, "Name"), /*#__PURE__*/React.createElement("input", {
-      className: "form-control",
-      placeholder: "Full name",
-      value: newName,
-      onChange: e => setNewName(e.target.value),
-      onKeyDown: e => e.key === 'Enter' && addAccount()
-    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: 11,
-        fontWeight: 600,
-        color: '#999',
-        marginBottom: 4
-      }
-    }, "Passcode"), /*#__PURE__*/React.createElement("input", {
-      className: "form-control",
-      placeholder: "Min 4 chars",
-      value: newPass,
-      onChange: e => setNewPass(e.target.value),
-      onKeyDown: e => e.key === 'Enter' && addAccount()
-    }))), /*#__PURE__*/React.createElement("button", {
-      className: "btn btn-primary btn-sm",
-      style: {
-        width: '100%',
-        justifyContent: 'center'
-      },
-      onClick: addAccount
-    }, "+ Add account")), ['admin', 'sales'].map(r => {
-      const accs = accounts.filter(a => a.role === r);
-      if (!accs.length) return null;
-      return /*#__PURE__*/React.createElement("div", {
-        key: r,
-        style: {
-          marginBottom: 14
-        }
-      }, /*#__PURE__*/React.createElement("div", {
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 8
-        }
-      }, /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          fontWeight: 700,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          color: '#999'
-        }
-      }, r === 'sales' ? 'Sales Executives' : 'Admins'), /*#__PURE__*/React.createElement("span", {
-        style: {
-          fontSize: 10,
-          fontWeight: 600,
-          background: roleBg[r],
-          color: roleColor[r],
-          padding: '1px 7px',
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: r === 'sales' ? '#bbf7d0' : '#e9d5ff'
-        }
-      }, accs.length)), /*#__PURE__*/React.createElement("div", {
-        style: {
-          border: '1px solid #e5e5e5',
-          borderRadius: 7,
-          overflow: 'hidden'
-        }
-      }, accs.map((acc, i) => /*#__PURE__*/React.createElement(AccountRow, {
-        key: acc.id,
-        acc: acc,
-        last: i === accs.length - 1,
-        onDelete: deleteAccount,
-        onChangePass: changePass,
-        roleColor: roleColor[r]
-      }))));
-    })));
-  }
+
   return /*#__PURE__*/React.createElement("div", {
     className: "login-wrap"
   }, /*#__PURE__*/React.createElement("div", {
@@ -991,228 +681,49 @@ function Login({
     className: "login-title"
   }, "Retention Tracker"), /*#__PURE__*/React.createElement("div", {
     className: "login-sub"
-  }, "Sign in to continue"), /*#__PURE__*/React.createElement("div", {
+  }, "Choose how you're joining"), /*#__PURE__*/React.createElement("div", {
     className: "role-grid"
   }, [['am', '👤', 'AM'], ['sales', '💼', 'Sales'], ['admin', '⚙️', 'Admin']].map(([r, ic, lb]) => /*#__PURE__*/React.createElement("div", {
     key: r,
     className: `role-btn${role === r ? ' active' : ''}`,
-    onClick: () => {
-      setRole(r);
-      setPass('');
-      setAmName('');
-      setSalesName('');
-      setErr('');
-    }
+    onClick: () => selectRole(r),
+    ...kbd(() => selectRole(r))
   }, /*#__PURE__*/React.createElement("div", {
     className: "role-icon"
   }, ic), /*#__PURE__*/React.createElement("div", {
     className: "role-label"
-  }, lb)))), /*#__PURE__*/React.createElement("input", {
-    className: "login-input",
-    type: "password",
-    placeholder: role === 'am' ? 'Passcode' : 'Passcode',
-    value: pass,
-    onChange: e => setPass(e.target.value),
-    onKeyDown: e => e.key === 'Enter' && submit()
-  }),
+  }, lb)))),
   role === 'am' && namesFetchErr === 'no_creds' && React.createElement('div', {
-    style:{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:6,padding:'10px 12px',fontSize:12,color:'#92400e',marginBottom:10,lineHeight:1.6}
+    style: { background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: '#92400e', marginBottom: 10, lineHeight: 1.6 }
   }, '⚠️ Tracker not configured yet. Ask your admin to open the tracker, go to ', React.createElement('strong', null, 'Config'), ', and save the Sheet credentials.'),
-  role === 'am' && namesFetchErr === 'failed' && React.createElement('div', {
-    style:{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:6,padding:'10px 12px',fontSize:12,color:'#991b1b',marginBottom:10,lineHeight:1.6}
-  }, '✕ Could not load names from Sheet. Check your connection. ', React.createElement('span', {style:{textDecoration:'underline',cursor:'pointer'}, onClick:doFetchNames}, 'Try again')),
+  role === 'am' && namesFetchErr && namesFetchErr !== 'no_creds' && React.createElement('div', {
+    style: { background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '10px 12px', fontSize: 12, color: '#991b1b', marginBottom: 10, lineHeight: 1.6 }
+  }, '✕ Could not load names from Sheet: ', namesFetchErr, ' ', React.createElement('span', { style: { textDecoration: 'underline', cursor: 'pointer' }, onClick: doFetchNames }, 'Try again')),
   role === 'am' && !namesFetchErr && /*#__PURE__*/React.createElement("select", {
     className: "login-input",
     value: amName,
-    onChange: e => setAmName(e.target.value)
+    onChange: e => pickAM(e.target.value)
   }, /*#__PURE__*/React.createElement("option", {
     value: ""
   }, loadingNames ? 'Loading names from Sheet…' : sheetAMNames.length === 0 ? 'No names found — contact admin' : 'Select your name'), sheetAMNames.map(n => /*#__PURE__*/React.createElement("option", {
     key: n,
     value: n
-  }, n))), role === 'sales' && /*#__PURE__*/React.createElement("select", {
-    className: "login-input",
-    value: salesName,
-    onChange: e => setSalesName(e.target.value)
-  }, /*#__PURE__*/React.createElement("option", {
-    value: ""
-  }, "Select your name"), salesAccounts.map(a => /*#__PURE__*/React.createElement("option", {
-    key: a.id,
-    value: a.name
-  }, a.name))), /*#__PURE__*/React.createElement("button", {
-    className: "login-btn",
-    onClick: submit
-  }, "Sign in →"), err && /*#__PURE__*/React.createElement("div", {
-    className: "login-err"
-  }, err), role === 'admin' && /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginTop: 16,
-      paddingTop: 14,
-      borderTop: '1px solid #e5e5e5',
-      textAlign: 'center'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: '#bbb',
-      marginBottom: 10
-    }
-  }, "Manage accounts"), /*#__PURE__*/React.createElement("input", {
+  }, n))),
+  role === 'admin' && /*#__PURE__*/React.createElement("input", {
     className: "login-input",
     type: "password",
-    placeholder: "Admin passcode to unlock",
+    placeholder: "Admin passcode",
     value: adminPass,
     onChange: e => setAdminPass(e.target.value),
-    onKeyDown: e => e.key === 'Enter' && unlockAdmin(),
-    style: {
-      marginBottom: 8
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost",
-    style: {
-      width: '100%',
-      justifyContent: 'center',
-      fontSize: 12
-    },
-    onClick: unlockAdmin
-  }, "Open Account Manager →"))));
-}
-function AccountRow({
-  acc,
-  last,
-  onDelete,
-  onChangePass,
-  roleColor
-}) {
-  const [editing, setEditing] = useState(false);
-  const [np, setNp] = useState('');
-  const [showPass, setShowPass] = useState(false);
-  const save = () => {
-    onChangePass(acc.id, np);
-    setEditing(false);
-    setNp('');
-  };
-  return /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      padding: '10px 14px',
-      borderBottom: last ? 'none' : '1px solid #f0f0f0',
-      background: '#fff'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 28,
-      height: 28,
-      borderRadius: '50%',
-      background: '#f5f5f5',
-      border: '1px solid #e5e5e5',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 11,
-      fontWeight: 700,
-      color: '#555',
-      flexShrink: 0
-    }
-  }, acc.name[0]?.toUpperCase()), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
-      minWidth: 0
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 12.5,
-      fontWeight: 600,
-      color: '#111',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap'
-    }
-  }, acc.name), editing ? /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 6,
-      marginTop: 4
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    style: {
-      fontSize: 11.5,
-      padding: '3px 8px',
-      border: '1px solid #e5e5e5',
-      borderRadius: 4,
-      outline: 'none',
-      flex: 1,
-      fontFamily: 'Inter'
-    },
-    type: "password",
-    placeholder: "New passcode (min 4)",
-    value: np,
-    onChange: e => setNp(e.target.value),
-    autoFocus: true,
-    onKeyDown: e => {
-      if (e.key === 'Enter') save();
-      if (e.key === 'Escape') {
-        setEditing(false);
-        setNp('');
-      }
-    }
-  }), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-primary btn-sm",
-    onClick: save
-  }, "Save"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => {
-      setEditing(false);
-      setNp('');
-    }
-  }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 2
-    }
-  }, /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: '#bbb',
-      fontFamily: 'JetBrains Mono',
-      letterSpacing: '0.08em'
-    }
-  }, showPass ? acc.pass : '••••••'), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 10,
-      color: '#ccc',
-      cursor: 'pointer'
-    },
-    onClick: () => setShowPass(s => !s)
-  }, showPass ? 'hide' : 'show'))), !editing && /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      gap: 5,
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    style: {
-      fontSize: 10,
-      padding: '3px 8px'
-    },
-    onClick: () => setEditing(true)
-  }, "Change pass"), /*#__PURE__*/React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    style: {
-      fontSize: 10,
-      padding: '3px 8px',
-      color: '#dc2626',
-      borderColor: '#fecaca'
-    },
-    onClick: () => {
-      if (window.confirm(`Delete account "${acc.name}"?`)) onDelete(acc.id);
-    }
-  }, "Delete")));
+    onKeyDown: e => e.key === 'Enter' && submitAdmin()
+  }),
+  role === 'admin' && /*#__PURE__*/React.createElement("button", {
+    className: "login-btn",
+    onClick: submitAdmin
+  }, "Continue →"),
+  err && /*#__PURE__*/React.createElement("div", {
+    className: "login-err"
+  }, err)));
 }
 
 // ─── SIDE PANEL ───────────────────────────────────────────────────────────────
@@ -1269,13 +780,15 @@ function SidePanel({
     }
   }, seller['AM Name']))), /*#__PURE__*/React.createElement("div", {
     className: "panel-close",
-    onClick: onClose
+    onClick: onClose,
+    ...kbd(onClose)
   }, "✕")), /*#__PURE__*/React.createElement("div", {
     className: "panel-tabs"
   }, ['activity', 'performance', 'remarks'].map(t => /*#__PURE__*/React.createElement("div", {
     key: t,
     className: `panel-tab${tab === t ? ' active' : ''}`,
-    onClick: () => setTab(t)
+    onClick: () => setTab(t),
+    ...kbd(() => setTab(t))
   }, t === 'activity' ? 'Activity' : t === 'performance' ? 'Performance' : 'Remarks', t === 'remarks' && b.remarks?.length > 0 && /*#__PURE__*/React.createElement("span", {
     style: {
       marginLeft: 4,
@@ -1399,17 +912,43 @@ function PerformanceTab({
     }
   }, m.v)))));
 }
-function ActivityTab({
-  b,
-  update,
-  amEditable,
-  salesEditable
+// Defined at module scope (not inside ActivityTab) so React keeps treating it as the
+// same component across re-renders — otherwise every parent re-render (e.g. after a
+// write completes) would remount the underlying <input>, resetting in-progress typing,
+// closing an open native date-picker, and orphaning the debounce timer below.
+function DebouncedInp({
+  field,
+  type = 'text',
+  disabled,
+  value,
+  onCommit
 }) {
-  const FG = ({
-    label,
-    children,
-    auto
-  }) => /*#__PURE__*/React.createElement("div", {
+  const [local, setLocal] = useState(value || '');
+  useEffect(() => { setLocal(value || ''); }, [value]);
+  const timer = useRef(null);
+  return /*#__PURE__*/React.createElement("input", {
+    type: type,
+    className: "form-control",
+    disabled: disabled,
+    value: local,
+    onChange: e => {
+      const v = e.target.value;
+      setLocal(v);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => onCommit(field, v), 600);
+    },
+    onBlur: e => {
+      clearTimeout(timer.current);
+      onCommit(field, e.target.value);
+    }
+  });
+}
+function FG({
+  label,
+  children,
+  auto
+}) {
+  return /*#__PURE__*/React.createElement("div", {
     className: "form-group"
   }, /*#__PURE__*/React.createElement("div", {
     className: "form-label"
@@ -1419,34 +958,31 @@ function ActivityTab({
       marginLeft: 6
     }
   }, "auto")), children);
-  const Sel = ({
-    field,
-    opts,
-    disabled
-  }) => /*#__PURE__*/React.createElement("select", {
+}
+// Same module-scope reasoning as DebouncedInp — a stable component identity so an
+// unrelated field's write completing doesn't tear down and rebuild this <select>.
+function Sel({
+  field,
+  opts,
+  disabled,
+  value,
+  onCommit
+}) {
+  return /*#__PURE__*/React.createElement("select", {
     className: "form-control",
     disabled: disabled,
-    value: b[field] || '—',
-    onChange: e => update(field, e.target.value)
+    value: value || '—',
+    onChange: e => onCommit(field, e.target.value)
   }, opts.map(o => /*#__PURE__*/React.createElement("option", {
     key: o
   }, o)));
-  const Inp = ({
-    field,
-    type = 'text',
-    disabled
-  }) => /*#__PURE__*/React.createElement("input", {
-    type: type,
-    className: "form-control",
-    disabled: disabled,
-    value: b[field] || '',
-    onChange: e => update(field, e.target.value)
-  });
-  const RO = ({
-    value
-  }) => /*#__PURE__*/React.createElement("div", {
-    className: "readonly-field"
-  }, value || '—');
+}
+function ActivityTab({
+  b,
+  update,
+  amEditable,
+  salesEditable
+}) {
   return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     className: "form-section"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1465,37 +1001,49 @@ function ActivityTab({
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "connectedRetention",
     opts: ['—', 'Yes', 'No'],
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.connectedRetention,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Disposition / Status"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "disposition",
     opts: DISPOSITION_OPTS,
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.disposition,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Tool Demo Booked Date"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "demoBookedDate",
     type: "date",
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.demoBookedDate || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Tool Demo Status"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "demoStatus",
     opts: DEMO_STATUS_OPTS,
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.demoStatus,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Tool Demo Taken Date"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "demoTakenDate",
     type: "date",
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.demoTakenDate || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Last Follow Up Date"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "lastFollowUpDate",
     type: "date",
-    disabled: !amEditable
+    disabled: !amEditable,
+    value: b.lastFollowUpDate || '',
+    onCommit: update
   })))), /*#__PURE__*/React.createElement("div", {
     className: "form-section"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1514,55 +1062,73 @@ function ActivityTab({
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "intent",
     opts: INTENT_OPTS,
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.intent,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Amount Pitched (₹)"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "amountPitched",
     type: "number",
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.amountPitched || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Duration Pitched"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "durationPitched",
     opts: DURATION_OPTS,
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.durationPitched,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Payment Link Sent"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "paymentLinkSent",
     opts: YN_OPTS,
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.paymentLinkSent,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Payment Link Sent Date"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "paymentLinkSentDate",
     type: "date",
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.paymentLinkSentDate || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Closure"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "closure",
     opts: YN_OPTS,
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.closure,
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Closure Date"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "closureDate",
     type: "date",
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.closureDate || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Closure Amount (₹)"
-  }, /*#__PURE__*/React.createElement(Inp, {
+  }, /*#__PURE__*/React.createElement(DebouncedInp, {
     field: "closureAmount",
     type: "number",
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.closureAmount || '',
+    onCommit: update
   })), /*#__PURE__*/React.createElement(FG, {
     label: "Closure Duration"
   }, /*#__PURE__*/React.createElement(Sel, {
     field: "closureDuration",
     opts: DURATION_OPTS,
-    disabled: !salesEditable
+    disabled: !salesEditable,
+    value: b.closureDuration,
+    onCommit: update
   })))));
 }
 function RemarksTab({
@@ -1759,17 +1325,24 @@ function SellerList({
     closure: 'All',
     amName: 'All'
   });
-  const updateCol = (key, val) => setColSearch(p => ({
-    ...p,
-    [key]: val
-  }));
+  const updateCol = (key, val) => {
+    setColSearch(p => ({
+      ...p,
+      [key]: val
+    }));
+    setPage(1);
+  };
 
   // Source: AM sees only their own sellers
   const source = useMemo(() => {
     if (role === 'am') return sellers.filter(s => s['AM Name'] === userName);
     if (role === 'sales') return sellers.filter(s => {
       const b = layerB[s['Advertiser ID']] || {};
-      return b.disposition === 'Demo Booked' || b.disposition === 'Interested';
+      const active = b.disposition === 'Demo Booked' || b.disposition === 'Interested';
+      // Once Sales has engaged with a seller, keep it visible even if the AM later
+      // changes disposition away from Demo Booked/Interested — don't let it vanish.
+      const touched = (b.remarks || []).some(r => r.role === 'SALES') || b.closure === 'Yes' || !!b.amountPitched;
+      return active || touched;
     });
     return sellers;
   }, [sellers, role, userName, layerB]);
@@ -1943,7 +1516,8 @@ function SellerList({
     const b = layerB[s['Advertiser ID']] || {};
     return /*#__PURE__*/React.createElement("tr", {
       key: s['Advertiser ID'],
-      onClick: () => setSelected(s)
+      onClick: () => setSelected(s),
+      ...kbd(() => setSelected(s))
     }, /*#__PURE__*/React.createElement("td", {
       className: "name-cell"
     }, s['Store Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
@@ -2046,7 +1620,8 @@ function SellerList({
     const b = layerB[s['Advertiser ID']] || {};
     return /*#__PURE__*/React.createElement("tr", {
       key: s['Advertiser ID'],
-      onClick: () => setSelected(s)
+      onClick: () => setSelected(s),
+      ...kbd(() => setSelected(s))
     }, /*#__PURE__*/React.createElement("td", {
       className: "name-cell"
     }, s['Store Name']), /*#__PURE__*/React.createElement("td", {
@@ -2175,7 +1750,8 @@ function SellerList({
     const b = layerB[s['Advertiser ID']] || {};
     return /*#__PURE__*/React.createElement("tr", {
       key: s['Advertiser ID'],
-      onClick: () => setSelected(s)
+      onClick: () => setSelected(s),
+      ...kbd(() => setSelected(s))
     }, /*#__PURE__*/React.createElement("td", {
       className: "name-cell"
     }, s['Store Name']), /*#__PURE__*/React.createElement("td", {
@@ -2658,7 +2234,6 @@ function ActivityTracker({
     key: d,
     style: {
       fontSize: 9,
-      color: '#bbb',
       textAlign: 'center',
       fontWeight: d === todayStr ? 700 : 400,
       color: d === todayStr ? '#111' : '#bbb'
@@ -2763,7 +2338,6 @@ function ActivityTracker({
     }, v || '0'), /*#__PURE__*/React.createElement("div", {
       style: {
         fontSize: 9,
-        color: '#bbb',
         fontWeight: d === todayStr ? 700 : 400,
         color: d === todayStr ? '#111' : '#bbb'
       }
@@ -3041,7 +2615,7 @@ function Dashboard({
       if (b.paymentLinkSent === 'Yes') paymentSent++;
       if (b.closure === 'Yes') {
         closed++;
-        closedRevenue += Number(b.closureAmount || 0);
+        closedRevenue += Number(b.closureAmount) || 0;
       }
       if (b.amountPitched || b.closure) {
         const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Unknown Sales';
@@ -3054,7 +2628,7 @@ function Dashboard({
         if (b.amountPitched) salesMap[author].pitched++;
         if (b.closure === 'Yes') {
           salesMap[author].closed++;
-          salesMap[author].revenue += Number(b.closureAmount || 0);
+          salesMap[author].revenue += Number(b.closureAmount) || 0;
         }
       }
     });
@@ -3734,7 +3308,7 @@ function weekStart(d) {
   return dt;
 }
 function dateStr(d) {
-  return d.toISOString().split('T')[0];
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({
@@ -3792,7 +3366,8 @@ function MonthView({
     return /*#__PURE__*/React.createElement("div", {
       key: str,
       className: `month-cell${!inMonth ? ' other-month' : ''}${isToday ? ' today' : ''}`,
-      onClick: () => inMonth && setCursor(date)
+      onClick: () => inMonth && setCursor(date),
+      ...(inMonth ? kbd(() => setCursor(date)) : {})
     }, /*#__PURE__*/React.createElement("div", {
       className: "month-day-num"
     }, date.getDate()), evs.slice(0, 3).map(ev => /*#__PURE__*/React.createElement(EventPill, {
@@ -3852,12 +3427,15 @@ function WeekView({
       style: {
         position: 'relative'
       }
-    }, h === 8 && evs.map(ev => /*#__PURE__*/React.createElement("div", {
+    }, h === 8 && evs.map((ev, i) => /*#__PURE__*/React.createElement("div", {
       key: ev.id,
       className: `week-event cal-event ${ev.color}`,
       style: {
         top: 4,
-        height: evs.length > 1 ? 'calc(100% - 8px)' : 'calc(100% - 8px)'
+        height: 'calc(100% - 8px)',
+        left: `${2 + i * (96 / evs.length)}%`,
+        width: `${96 / evs.length - 2}%`,
+        right: 'auto'
       },
       onClick: e => {
         e.stopPropagation();
@@ -3950,7 +3528,16 @@ function UploadView({
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: r => onUpload(r.data)
+      complete: r => {
+        // Mirror sheetReadSellers' header mapping + Advertiser ID filtering so a CSV
+        // with differently-cased/renamed columns doesn't silently produce blank sellers.
+        const mapped = r.data.map(row => {
+          const seller = {};
+          Object.keys(row).forEach(h => { seller[LAYER_A_MAP[h] || h] = row[h] || ''; });
+          return seller;
+        }).filter(s => s['Advertiser ID']);
+        onUpload(mapped);
+      }
     });
   };
   return /*#__PURE__*/React.createElement("div", {
@@ -4034,7 +3621,10 @@ function ConfigView() {
     React.createElement('div', { className:'config-wrap' },
       React.createElement('div', { className:'config-card' },
         React.createElement('div', { className:'config-card-title' }, 'Google Sheets Connection'),
-        React.createElement('div', { className:'config-card-sub' }, 'Stored in your browser only — never in source code, safe to push to GitHub.'),
+        React.createElement('div', { className:'config-card-sub' }, 'The tracker already works out of the box with the Sheet ID/API key/Apps Script URL baked into this file — only use this if you want to point it at a different Sheet.'),
+        React.createElement('div', { style:{marginBottom:16,padding:'10px 12px',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:6,fontSize:11.5,color:'#92400e',lineHeight:1.6} },
+          'Saving here overrides the built-in defaults for this browser only — it\'s stored in localStorage, not in source. The baked-in defaults remain visible to anyone who reads this file.'
+        ),
         [
           ['sheetId',  'Sheet ID',        'Paste your Sheet ID here',                   false],
           ['apiKey',   'API Key',         'Paste your Google API key here',             true],
@@ -4060,7 +3650,7 @@ function ConfigView() {
           )
         ),
         React.createElement('div', { style:{marginTop:14,padding:'10px 12px',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:6,fontSize:11.5,color:'#166534',lineHeight:1.6} },
-          '✓ Credentials saved to your browser localStorage only. Zero secrets in the source file — safe on GitHub.'
+          '✓ Override saved for this browser. Reload or use "Test connection" above to verify it against the new Sheet.'
         )
       )
     )
@@ -4072,6 +3662,11 @@ function App() {
   const [session, setSession] = useState(null);
   const [sellers, setSellers] = useState([]);
   const [layerB, setLayerB] = useState({});
+  const layerBRef = useRef(layerB);
+  useEffect(() => { layerBRef.current = layerB; }, [layerB]);
+  // Advertiser IDs whose most recent write to the Sheet failed — kept out of the
+  // next reload's overwrite so an unsynced local edit isn't silently discarded.
+  const [pendingErrors, setPendingErrors] = useState({});
   const [page, setPage] = useState('dashboard');
   const [syncMsg, setSyncMsg] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -4104,22 +3699,32 @@ function App() {
       try {
         layerBData = await sheetReadAll();
       } catch (e) {/* TrackerLayerB may not exist yet — ok */}
+      let keptUnsynced = 0;
       setLayerB(prev => {
         const merged = {};
         sellerData.forEach(s => {
           const id = s['Advertiser ID'];
-          merged[id] = layerBData[id] || prev[id] || initLayerB();
+          if (pendingErrors[id]) {
+            merged[id] = prev[id] || layerBData[id] || initLayerB();
+            keptUnsynced++;
+          } else {
+            merged[id] = layerBData[id] || prev[id] || initLayerB();
+          }
         });
         return merged;
       });
-      showMsg(`✓ ${sellerData.length} sellers loaded from Sheet`);
+      if (keptUnsynced > 0) {
+        showMsg(`✓ ${sellerData.length} sellers loaded — ${keptUnsynced} unsynced local change${keptUnsynced > 1 ? 's' : ''} kept, click Sync to retry`, 'warn');
+      } else {
+        showMsg(`✓ ${sellerData.length} sellers loaded from Sheet`);
+      }
       setPage('sellers');
     } catch (e) {
       showMsg(`Failed to load: ${e.message}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pendingErrors]);
 
   // ── Pull Layer B only (sync activity data) ───────────────────────────────
   const syncFromSheet = useCallback(async (silent = false) => {
@@ -4146,25 +3751,24 @@ function App() {
 
   // ── Write single seller's Layer B to Sheet ───────────────────────────────
   const updateLayerB = useCallback(async (id, patch) => {
-    setLayerB(prev => {
-      const cur = prev[id] || initLayerB();
-      return {
-        ...prev,
-        [id]: {
-          ...cur,
-          ...patch
-        }
-      };
-    });
+    // Build off layerBRef (kept in sync synchronously) rather than the `layerB` closed
+    // over at callback-creation time, so back-to-back edits don't clobber each other.
+    const merged = { ...(layerBRef.current[id] || initLayerB()), ...patch };
+    layerBRef.current = { ...layerBRef.current, [id]: merged };
+    setLayerB(prev => ({ ...prev, [id]: merged }));
     try {
-      await sheetWriteRow(id, {
-        ...(layerB[id] || initLayerB()),
-        ...patch
+      await sheetWriteRow(id, merged);
+      setPendingErrors(prev => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
       });
     } catch (e) {
       showMsg(`Write failed: ${e.message}`, 'error');
+      setPendingErrors(prev => ({ ...prev, [id]: true }));
     }
-  }, [layerB]);
+  }, []);
 
   // ── CSV upload: still available as admin tool to refresh Layer A ─────────
   const handleUpload = useCallback(async data => {
@@ -4246,7 +3850,8 @@ function App() {
   }, nav.map(n => /*#__PURE__*/React.createElement("div", {
     key: n.id,
     className: `nav-item${page === n.id ? ' active' : ''}`,
-    onClick: () => setPage(n.id)
+    onClick: () => setPage(n.id),
+    ...kbd(() => setPage(n.id))
   }, /*#__PURE__*/React.createElement("span", {
     className: "nav-icon"
   }, n.icon), n.label))), /*#__PURE__*/React.createElement("div", {
@@ -4407,7 +4012,7 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(ErrorBoundary, null, React.createElement(App, null)));
 
 </script>
 </body>
