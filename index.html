@@ -1,0 +1,4409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>SellerGeni — Retention Tracker</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface2: #f9f9f9;
+    --surface3: #f3f3f3;
+    --border: #e5e5e5;
+    --border2: #d0d0d0;
+    --accent: #111111;
+    --accent2: #333333;
+    --accent-glow: rgba(0,0,0,0.04);
+    --green: #16a34a;
+    --green-dim: rgba(22,163,74,0.08);
+    --amber: #d97706;
+    --amber-dim: rgba(217,119,6,0.08);
+    --red: #dc2626;
+    --red-dim: rgba(220,38,38,0.07);
+    --blue: #2563eb;
+    --blue-dim: rgba(37,99,235,0.08);
+    --purple: #7c3aed;
+    --purple-dim: rgba(124,58,237,0.08);
+    --text: #111111;
+    --text2: #555555;
+    --text3: #999999;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 13px; }
+  
+  /* LOGIN */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #fafafa; }
+  .login-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 48px; width: 400px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+  .login-logo { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+  .login-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .login-sub { color: var(--text3); font-size: 13px; margin-bottom: 32px; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+  .role-btn { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.12s; }
+  .role-btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .role-btn.active { border-color: var(--accent); background: var(--surface2); }
+  .role-btn .role-icon { font-size: 20px; margin-bottom: 6px; }
+  .role-btn .role-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; }
+  .login-input { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.15s; margin-bottom: 10px; }
+  .login-input:focus { border-color: var(--accent); }
+  .login-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); padding: 11px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .login-btn:hover { opacity: 0.85; }
+  .login-err { color: var(--red); font-size: 12px; margin-top: 8px; text-align: center; }
+  select.login-input { appearance: none; }
+
+  /* LAYOUT */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 210px; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 20px 18px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-logo .brand { font-size: 10px; font-weight: 700; letter-spacing: 0.18em; color: var(--text3); text-transform: uppercase; }
+  .sidebar-logo .product { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 2px; }
+  .sidebar-logo .role-badge { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; }
+  .role-am { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .role-sales { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .role-admin { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+  .sidebar-nav { flex: 1; padding: 10px 8px; overflow-y: auto; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text3); font-size: 12.5px; font-weight: 500; transition: all 0.1s; margin-bottom: 1px; }
+  .nav-item:hover { background: var(--surface2); color: var(--text2); }
+  .nav-item.active { background: var(--surface2); color: var(--text); font-weight: 600; border-left: 2px solid var(--accent); border-radius: 0; padding-left: 8px; }
+  .nav-item .nav-icon { width: 16px; text-align: center; font-size: 13px; }
+  .nav-section { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #ccc; padding: 14px 10px 6px; }
+  .sidebar-footer { padding: 12px 14px; border-top: 1px solid var(--border); }
+  .user-info { display: flex; align-items: center; gap: 9px; }
+  .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+  .user-name { font-size: 12px; font-weight: 600; color: var(--text); }
+  .user-role { font-size: 10px; color: var(--text3); }
+  .logout-btn { margin-left: auto; background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; padding: 4px; }
+  .logout-btn:hover { color: var(--red); }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar { height: 48px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+  .page-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .topbar-spacer { flex: 1; }
+  .search-wrap { position: relative; }
+  .search-wrap input { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px 6px 30px; color: var(--text); font-size: 12px; font-family: 'Inter', sans-serif; outline: none; width: 200px; }
+  .search-wrap input:focus { border-color: var(--accent); background: #fff; }
+  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 11px; }
+  .filter-bar { display: flex; align-items: center; gap: 8px; padding: 0 20px; height: 42px; border-bottom: 1px solid var(--border); background: #fff; flex-shrink: 0; overflow-x: auto; }
+  .filter-select { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; color: var(--text2); font-size: 11.5px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; }
+  .filter-select:focus { border-color: var(--accent); color: var(--text); }
+  .filter-chip { padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text3); white-space: nowrap; transition: all 0.1s; }
+  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .filter-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  /* TABLE */
+  .content { flex: 1; overflow-y: auto; padding: 16px 20px; background: #fafafa; }
+  .table-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .table-count { font-size: 12px; color: var(--text3); }
+  .table-count strong { color: var(--text); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.1s; font-family: 'Inter', sans-serif; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-ghost { background: #fff; border: 1px solid var(--border); color: var(--text2); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--surface2); }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: #fafafa; padding: 8px 12px; text-align: left; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th:hover { background: #f3f3f3; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.08s; cursor: pointer; }
+  tbody tr:hover { background: #fafafa; }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 9px 12px; font-size: 12.5px; color: var(--text2); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+  td.name-cell { color: var(--text); font-weight: 500; }
+  td.name-cell:hover { color: var(--blue); }
+
+  /* BADGES — outlined style for chalk */
+  .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap; border: 1px solid; }
+  .badge-p0 { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+  .badge-p1 { border-color: #fcd34d; color: #b45309; background: #fffbeb; }
+  .badge-p2 { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+  .badge-p3 { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .badge-green { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .badge-amber { border-color: #fcd34d; color: #b45309; background: #fffbeb; }
+  .badge-red { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+  .badge-blue { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
+  .badge-purple { border-color: #d8b4fe; color: #6b21a8; background: #faf5ff; }
+  .badge-gray { border-color: var(--border); color: var(--text3); background: var(--surface2); }
+  .badge-hot { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+  .badge-warm { border-color: #fcd34d; color: #b45309; background: #fffbeb; }
+  .badge-cold { border-color: #bae6fd; color: #0369a1; background: #f0f9ff; }
+
+  /* SIDE PANEL */
+  .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 100; display: flex; justify-content: flex-end; }
+  .panel { width: 560px; background: #fff; border-left: 1px solid var(--border); height: 100%; display: flex; flex-direction: column; animation: slideIn 0.18s ease; box-shadow: -4px 0 24px rgba(0,0,0,0.08); }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+  .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; }
+  .panel-store { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .panel-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .panel-close { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text3); font-size: 14px; flex-shrink: 0; }
+  .panel-close:hover { color: var(--text); border-color: var(--border2); }
+  .panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; padding: 0 20px; }
+  .panel-tab { padding: 9px 12px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.1s; white-space: nowrap; }
+  .panel-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+  .panel-body { flex: 1; overflow-y: auto; padding: 20px; background: #fafafa; }
+
+  /* FORMS */
+  .form-section { margin-bottom: 20px; }
+  .form-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text3); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 11px; font-weight: 600; color: var(--text3); }
+  .form-control { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; color: var(--text); font-size: 12.5px; font-family: 'Inter', sans-serif; outline: none; width: 100%; transition: border-color 0.1s; }
+  .form-control:focus { border-color: var(--accent); }
+  .form-control:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface2); }
+  select.form-control { cursor: pointer; }
+  .readonly-field { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; color: var(--text2); font-size: 12.5px; min-height: 33px; }
+  .auto-badge { font-size: 10px; color: var(--text3); font-weight: 500; }
+
+  /* METRICS GRID */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .metric-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 4px; }
+  .metric-value { font-size: 16px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+  .metric-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
+
+  /* TIMELINE */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; margin-top: 2px; border: 1px solid var(--border); }
+  .timeline-content { flex: 1; }
+  .timeline-author { font-size: 12px; font-weight: 600; color: var(--text); }
+  .timeline-role { font-size: 10.5px; color: var(--text3); margin-left: 6px; }
+  .timeline-time { font-size: 10.5px; color: var(--text3); float: right; }
+  .timeline-msg { font-size: 12.5px; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+
+  /* REMARKS */
+  .remarks-input { width: 100%; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--text); font-size: 12.5px; font-family: 'Inter', sans-serif; outline: none; resize: vertical; min-height: 80px; transition: border-color 0.1s; }
+  .remarks-input:focus { border-color: var(--accent); }
+  .remarks-post-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+
+  /* DASHBOARD */
+  .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .dash-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+  .dash-card-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 8px; }
+  .dash-card-value { font-size: 26px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; line-height: 1; }
+  .dash-card-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+  .dash-card-accent { border-left: 2px solid var(--accent); }
+  .dash-card-green { border-left: 2px solid var(--green); }
+  .dash-card-amber { border-left: 2px solid var(--amber); }
+  .dash-card-red { border-left: 2px solid var(--red); }
+  .section-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .funnel-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+  .funnel-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .funnel-label { font-size: 11.5px; color: var(--text2); width: 140px; text-align: right; flex-shrink: 0; }
+  .funnel-bar-wrap { flex: 1; background: var(--surface2); border-radius: 3px; height: 20px; overflow: hidden; }
+  .funnel-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; transition: width 0.5s ease; }
+  .funnel-val { font-size: 11px; font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
+  .am-perf-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .am-perf-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .tab-pills { display: flex; gap: 4px; }
+  .tab-pill { padding: 4px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; background: var(--surface2); border: 1px solid var(--border); color: var(--text3); transition: all 0.1s; }
+  .tab-pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .leaderboard { padding: 0; }
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid var(--border); }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { font-size: 13px; font-weight: 700; color: var(--text3); font-family: 'JetBrains Mono', monospace; width: 24px; text-align: center; flex-shrink: 0; }
+  .lb-rank.gold { color: #d97706; }
+  .lb-rank.silver { color: #64748b; }
+  .lb-rank.bronze { color: #92400e; }
+  .lb-name { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .lb-team { font-size: 11px; color: var(--text3); }
+  .lb-stats { display: flex; gap: 16px; }
+  .lb-stat { text-align: right; }
+  .lb-stat-val { font-size: 13px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; }
+  .lb-stat-label { font-size: 10px; color: var(--text3); }
+  .bar-chart-wrap { padding: 14px 16px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-name { font-size: 11.5px; color: var(--text2); width: 100px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+  .bar-outer { flex: 1; background: var(--surface2); border-radius: 3px; height: 18px; overflow: hidden; }
+  .bar-inner { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; min-width: 20px; }
+  .bar-val { font-size: 11px; font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
+
+  /* UPLOAD */
+  .upload-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius); padding: 40px; text-align: center; cursor: pointer; transition: all 0.12s; background: #fff; }
+  .upload-zone:hover { border-color: var(--accent); background: #fafafa; }
+  .upload-zone.drag { border-color: var(--accent); background: #fafafa; }
+  .upload-icon { font-size: 28px; margin-bottom: 12px; }
+  .upload-text { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .upload-sub { font-size: 12px; color: var(--text3); }
+
+  /* EMPTY */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #bbb; }
+
+  /* SYNC BAR */
+  .sync-bar { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 7px 12px; font-size: 11.5px; color: var(--green); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .sync-bar.error { background: #fef2f2; border-color: #fecaca; color: var(--red); }
+  .sync-bar.warn { background: #fffbeb; border-color: #fde68a; color: var(--amber); }
+
+  /* CONFIG */
+  .config-wrap { max-width: 560px; }
+  .config-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; margin-bottom: 14px; }
+  .config-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .config-card-sub { font-size: 11.5px; color: var(--text3); margin-bottom: 16px; }
+  .input-label { font-size: 11px; font-weight: 600; color: var(--text3); margin-bottom: 5px; display: block; }
+
+  /* TOOLTIP */
+  .info-tip { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--surface2); color: var(--text3); font-size: 9px; text-align: center; line-height: 14px; cursor: help; margin-left: 4px; border: 1px solid var(--border); }
+
+  /* CALENDAR */
+  .cal-wrap { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+  .cal-toolbar { display:flex; align-items:center; gap:10px; padding:12px 20px; border-bottom:1px solid var(--border); background:#fff; flex-shrink:0; flex-wrap:wrap; }
+  .cal-nav-group { display:flex; align-items:center; gap:6px; }
+  .cal-nav-btn { background:#fff; border:1px solid var(--border); border-radius:var(--radius-sm); width:26px; height:26px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text3); font-size:13px; transition:all 0.1s; }
+  .cal-nav-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .cal-title { font-size:13px; font-weight:600; color:var(--text); min-width:180px; text-align:center; }
+  .cal-view-pills { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
+  .cal-view-pill { padding:4px 12px; font-size:11.5px; font-weight:500; cursor:pointer; color:var(--text3); transition:all 0.1s; border-right:1px solid var(--border); }
+  .cal-view-pill:last-child { border-right:none; }
+  .cal-view-pill.active { background:var(--accent); color:#fff; }
+  .cal-toggle { display:flex; align-items:center; gap:6px; margin-left:auto; }
+  .cal-toggle-label { font-size:11.5px; color:var(--text3); }
+  .cal-toggle-switch { position:relative; width:34px; height:18px; cursor:pointer; }
+  .cal-toggle-switch input { opacity:0; width:0; height:0; }
+  .cal-toggle-track { position:absolute; inset:0; background:var(--surface3); border-radius:20px; transition:0.15s; border:1px solid var(--border); }
+  .cal-toggle-switch input:checked + .cal-toggle-track { background:var(--accent); border-color:var(--accent); }
+  .cal-toggle-thumb { position:absolute; top:2px; left:2px; width:14px; height:14px; background:#fff; border-radius:50%; transition:0.15s; }
+  .cal-toggle-switch input:checked ~ .cal-toggle-thumb { left:18px; }
+  .cal-body { flex:1; overflow:auto; padding:16px 20px; background:#fafafa; }
+
+  /* MONTH VIEW */
+  .month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .month-dow { background:#fafafa; padding:7px 4px; text-align:center; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text3); }
+  .month-cell { background:#fff; min-height:88px; padding:6px; position:relative; cursor:default; }
+  .month-cell.other-month { background:#fafafa; opacity:0.6; }
+  .month-cell.today { background:#fffef0; }
+  .month-cell.today .month-day-num { background:var(--accent); color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
+  .month-day-num { font-size:11px; font-weight:500; color:var(--text3); margin-bottom:4px; width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
+  .cal-event { border-radius:3px; padding:2px 6px; margin-bottom:2px; font-size:10px; font-weight:600; cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:opacity 0.1s; }
+  .cal-event:hover { opacity:0.75; }
+  .cal-event-demo { background:#eff6ff; color:#1d4ed8; border-left:2px solid #2563eb; }
+  .cal-event-team { background:#faf5ff; color:#6b21a8; border-left:2px solid #7c3aed; }
+  .more-events { font-size:10px; color:var(--text3); cursor:pointer; padding:1px 4px; }
+  .more-events:hover { color:var(--blue); }
+
+  /* WEEK VIEW */
+  .week-grid { display:grid; grid-template-columns:50px repeat(7,1fr); gap:0; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:var(--border); }
+  .week-header { background:#fafafa; padding:8px 6px; text-align:center; border-bottom:1px solid var(--border); }
+  .week-dow { font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text3); letter-spacing:0.06em; }
+  .week-date { font-size:17px; font-weight:600; color:var(--text); line-height:1.2; }
+  .week-date.today-num { color:var(--blue); }
+  .week-time-col { background:#fff; }
+  .week-time-slot { height:48px; display:flex; align-items:flex-start; justify-content:flex-end; padding:2px 8px 0 0; font-size:9px; color:var(--text3); font-family:'JetBrains Mono',monospace; border-bottom:1px solid var(--border); }
+  .week-day-col { background:#fff; position:relative; }
+  .week-day-slot { height:48px; border-bottom:1px solid var(--border); border-right:1px solid var(--border); position:relative; }
+  .week-event { position:absolute; left:2px; right:2px; border-radius:3px; padding:2px 5px; font-size:10px; font-weight:600; cursor:pointer; overflow:hidden; z-index:2; }
+
+  /* DAY VIEW */
+  .day-grid { display:grid; grid-template-columns:50px 1fr; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:#fff; }
+  .day-header { grid-column:1/-1; background:#fafafa; padding:12px 16px; border-bottom:1px solid var(--border); }
+  .day-header-date { font-size:18px; font-weight:600; color:var(--text); }
+  .day-header-dow { font-size:12px; color:var(--text3); margin-top:2px; }
+  .day-event-col { position:relative; min-height:1152px; }
+  .day-slot { height:48px; border-bottom:1px solid var(--border); }
+  .day-event { position:absolute; left:8px; right:8px; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:600; cursor:pointer; z-index:2; }
+
+  /* EVENT POPUP */
+  .ev-popup { position:fixed; z-index:200; background:#fff; border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 4px 20px rgba(0,0,0,0.12); padding:16px; width:280px; }
+  .ev-popup-store { font-size:13px; font-weight:600; color:var(--text); margin-bottom:6px; }
+  .ev-popup-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:11.5px; }
+  .ev-popup-label { color:var(--text3); }
+  .ev-popup-val { color:var(--text); font-weight:600; }
+  .ev-popup-close { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; }
+  .ev-popup-close:hover { color:var(--text); }
+  .ev-popup-footer { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo
+} = React;
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const PROGRAMS = ['All', 'accelerate', 'elevatePlus'];
+const TIERS = ['All', 'P0', 'P1', 'P2', 'P3'];
+const DISPOSITION_OPTS = ['—', 'Not Responding', 'Call Later', 'Interested', 'Not Interested', 'Demo Booked'];
+const DEMO_STATUS_OPTS = ['—', 'Not Responding before Demo', 'Not Responding after Demo', 'Call Later', 'Requires Follow Up', 'Completed', 'Not Interested'];
+const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
+const DURATION_OPTS = ['—', '1 Month', '2 Months', '3 Months', '6 Months', '12 Months'];
+const CLOSURE_OPTS = ['—', 'Yes', 'No'];
+const YN_OPTS = ['—', 'Yes', 'No'];
+const today = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {
+  day: '2-digit',
+  month: 'short',
+  year: '2-digit'
+}) : '—';
+const fmtNum = n => n != null && !isNaN(n) ? Number(n).toLocaleString('en-IN', {
+  maximumFractionDigits: 0
+}) : '—';
+const fmtPct = s => s && s !== '—' ? s : '—';
+function tierBadge(t) {
+  const cls = {
+    P0: 'badge-p0',
+    P1: 'badge-p1',
+    P2: 'badge-p2',
+    P3: 'badge-p3'
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: `badge ${cls[t] || 'badge-gray'}`
+  }, t || '—');
+}
+function dispositionBadge(d) {
+  const map = {
+    'Demo Booked': 'badge-blue',
+    'Interested': 'badge-green',
+    'Not Responding': 'badge-red',
+    'Not Interested': 'badge-red',
+    'Call Later': 'badge-amber'
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: `badge ${map[d] || 'badge-gray'}`
+  }, d || '—');
+}
+function demoStatusBadge(d) {
+  const map = {
+    'Completed': 'badge-green',
+    'Not Interested': 'badge-red',
+    'Requires Follow Up': 'badge-amber',
+    'Not Responding before Demo': 'badge-red',
+    'Not Responding after Demo': 'badge-red',
+    'Call Later': 'badge-amber'
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: `badge ${map[d] || 'badge-gray'}`
+  }, d || '—');
+}
+function intentBadge(i) {
+  const cls = {
+    Hot: 'badge-hot',
+    Warm: 'badge-warm',
+    Cold: 'badge-cold'
+  };
+  return i && i !== '—' ? /*#__PURE__*/React.createElement("span", {
+    className: `badge ${cls[i] || 'badge-gray'}`
+  }, i) : /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-gray"
+  }, "—");
+}
+function initLayerB() {
+  return {
+    connectedRetention: '—',
+    disposition: '—',
+    demoBookedDate: '',
+    demoStatus: '—',
+    demoTakenDate: '',
+    lastFollowUpDate: '',
+    intent: '—',
+    amountPitched: '',
+    durationPitched: '—',
+    paymentLinkSent: '—',
+    paymentLinkSentDate: '',
+    closure: '—',
+    closureDate: '',
+    closureAmount: '',
+    closureDuration: '—',
+    remarks: []
+  };
+}
+
+// ─── GOOGLE SHEET SYNC ────────────────────────────────────────────────────────
+// Credentials are NEVER hardcoded. Loaded from localStorage after first-run setup.
+const TAB = 'TrackerLayerB';
+
+function getCredentials() {
+  try {
+    const raw = localStorage.getItem('sg_creds');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // If all three fields present, use localStorage version
+      if (parsed.sheetId && parsed.apiKey && parsed.proxyUrl) return parsed;
+    }
+  } catch {}
+  // Fallback to baked-in defaults
+  return {
+    sheetId:  '1dAH4vEQbUAaqSSQ0aMAyq6gITv15yTiUk4Ktz9J8Q50',
+    apiKey:   'AIzaSyCCLHheyLj-1Gk4NOsoC3jgyCgDFbJmybk',
+    proxyUrl: 'https://script.google.com/macros/s/AKfycby1E_ryg4C37rqs4a7W4jtFBEP0En5uyFj6AnNUtCPTbtV-ejq2zoZ1z3evZ1lVb7oN/exec'
+  };
+}
+function saveCredentials(creds) {
+  localStorage.setItem('sg_creds', JSON.stringify(creds));
+}
+// Convenience getters — always read live from localStorage
+const SHEET_ID  = () => (getCredentials() || {}).sheetId  || '';
+const API_KEY   = () => (getCredentials() || {}).apiKey   || '';
+const PROXY_URL = () => (getCredentials() || {}).proxyUrl || '';
+
+// Layer B column order (must match sheet header row)
+const LB_COLS = ['AdvertiserID', 'connectedRetention', 'disposition', 'demoBookedDate', 'demoStatus', 'demoTakenDate', 'lastFollowUpDate', 'intent', 'amountPitched', 'durationPitched', 'paymentLinkSent', 'paymentLinkSentDate', 'closure', 'closureDate', 'closureAmount', 'closureDuration', 'remarks'];
+function lbToRow(id, b) {
+  return LB_COLS.map(c => c === 'AdvertiserID' ? id : c === 'remarks' ? JSON.stringify(b.remarks || []) : b[c] || '');
+}
+function rowToLb(row) {
+  const b = initLayerB();
+  LB_COLS.forEach((c, i) => {
+    if (c === 'AdvertiserID') return;
+    if (c === 'remarks') {
+      try {
+        b.remarks = JSON.parse(row[i] || '[]');
+      } catch {
+        b.remarks = [];
+      }
+    } else b[c] = row[i] || (c.startsWith('disposition') || c.startsWith('connected') || c.startsWith('intent') || c.startsWith('demoStatus') || c.startsWith('durationPitched') || c.startsWith('paymentLinkSent') || c.startsWith('closure') ? '—' : '');
+  });
+  return b;
+}
+async function sheetEnsureTab() {
+  // Check if tab exists; if not, create it with header row
+  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}?key=${API_KEY()}`;
+  const meta = await fetch(metaUrl).then(r => r.json());
+  const exists = meta.sheets?.some(s => s.properties?.title === TAB);
+  if (!exists) {
+    // Create tab via batchUpdate — requires OAuth; skip silently if fails
+    console.warn('Tab not found, will be created on first write via append');
+  }
+}
+async function sheetReadAll() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}/values/${TAB}?key=${API_KEY()}`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e?.error?.message || 'Sheet read failed');
+  }
+  const data = await r.json();
+  const rows = data.values || [];
+  if (rows.length < 2) return {};
+  const out = {};
+  rows.slice(1).forEach(row => {
+    const id = row[0];
+    if (id) out[id] = rowToLb(row);
+  });
+  return out;
+}
+
+// Column mapping from your Sheet (Sheet1) header row to internal field names
+const LAYER_A_MAP = {
+  'Advertiser ID': 'Advertiser ID',
+  'Store Name': 'Store Name',
+  'AM Name': 'AM Name',
+  'Team Name': 'Team Name',
+  'Onboarding Date': 'Onboarding Date',
+  'WOS': 'WOS',
+  'Program': 'Program',
+  'Pre GMS': 'Pre GMS',
+  'Pre Ad Sales': 'Pre Ad Sales',
+  'Pre Ad Spends': 'Pre Ad Spends',
+  'Post GMS': 'Post GMS',
+  'Post Ad Sales': 'Post Ad Sales',
+  'Post Ad Spends': 'Post Ad Spends',
+  'ROAS': 'ROAS',
+  'TACoS': 'TACoS',
+  'GMS Growth %': 'GMS Growth %',
+  'Ad Sales Growth %': 'Ad Sales Growth %',
+  'Ad Spend Growth %': 'Ad Spend Growth %',
+  'Scale Score': 'Scale Score',
+  'Efficiency Score': 'Efficiency Score',
+  'Adaptive Score': 'Adaptive Score',
+  'Kanban Rating': 'Kanban Rating',
+  'CS Evaluation Score': 'CS Evaluation Score',
+  'FINAL RETENTION SCORE': 'FINAL RETENTION SCORE',
+  'Retention %': 'Retention %',
+  'UPDATED TIERING': 'UPDATED TIERING',
+  'CS Evaluation': 'CS Evaluation'
+};
+async function sheetReadSellers() {
+  // Read from Sheet1 (the main data tab with all seller records)
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}/values/Sheet1?key=${API_KEY()}`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    const e = await r.json();
+    throw new Error(e?.error?.message || 'Could not read seller data from Sheet');
+  }
+  const data = await r.json();
+  const rows = data.values || [];
+  if (rows.length < 2) return [];
+
+  // First row = headers
+  const headers = rows[0];
+  return rows.slice(1).map(row => {
+    const seller = {};
+    headers.forEach((h, i) => {
+      const key = LAYER_A_MAP[h] || h;
+      seller[key] = row[i] || '';
+    });
+    return seller;
+  }).filter(s => s['Advertiser ID']);
+}
+async function sheetWriteRow(id, b, existingRowIndex) {
+  const row = lbToRow(id, b);
+  const r = await fetch(PROXY_URL(), {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'text/plain'},
+    body: JSON.stringify({
+      action: 'write',
+      id,
+      row,
+      headers: LB_COLS
+    })
+  });
+  if (!r.ok) throw new Error(`Proxy error: ${r.status}`);
+  const data = await r.json();
+  if (!data.ok) throw new Error(data.error || 'Write failed');
+}
+async function sheetEnsureHeader() {
+  // Header is now written by the Apps Script proxy on first write — no-op here
+}
+async function proxyWriteAccounts(accounts) {
+  try {
+    await fetch(PROXY_URL(), {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type': 'text/plain'},
+      body: JSON.stringify({ action: 'writeAccounts', accounts }),
+    });
+  } catch(e) { console.warn('Account sync failed:', e); }
+}
+
+async function proxyReadAccounts() {
+  try {
+    const r = await fetch(PROXY_URL() + '?action=readAccounts', { mode: 'cors' });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.accounts || null;
+  } catch(e) { return null; }
+}
+
+// ─── ACCOUNT STORE (persisted in localStorage) ───────────────────────────────
+const DEFAULT_ACCOUNTS = [{
+  id: 'admin-root',
+  role: 'admin',
+  name: 'Admin',
+  pass: 'admin123'
+}, {
+  id: 'sales-default',
+  role: 'sales',
+  name: 'Sales',
+  pass: 'sales123'
+}];
+const AM_PASS = 'am123';
+function loadAccounts() {
+  try {
+    const raw = localStorage.getItem('sg_accounts');
+    if (raw) {
+      // Remove any legacy am-default entries — AMs now come from Sheet
+      const parsed = JSON.parse(raw).filter(a => !(a.role === 'am'));
+      return parsed.length ? parsed : DEFAULT_ACCOUNTS;
+    }
+  } catch {}
+  return DEFAULT_ACCOUNTS;
+}
+function saveAccounts(accs) {
+  localStorage.setItem('sg_accounts', JSON.stringify(accs));
+  proxyWriteAccounts(accs); // also sync to Sheet for cross-device access
+}
+function genId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+async function fetchAMNamesFromSheet() {
+  const sid = SHEET_ID();
+  const key = API_KEY();
+  if (!sid || !key) throw new Error('NO_CREDS');
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Sheet1!C:C?key=${key}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('FETCH_FAILED');
+  const data = await r.json();
+  if (data.error) throw new Error(data.error.message);
+  const rows = data.values || [];
+  if (rows.length < 2) return [];
+  return [...new Set(rows.slice(1).map(r => r[0]).filter(Boolean).sort())];
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function Login({
+  onLogin
+}) {
+  const [accounts, setAccounts] = useState(loadAccounts);
+  const [role, setRole] = useState('am');
+  const [pass, setPass] = useState('');
+  const [amName, setAmName] = useState('');
+  const [salesName, setSalesName] = useState('');
+  const [err, setErr] = useState('');
+  const [sheetAMNames, setSheetAMNames] = useState([]);
+  const [loadingNames, setLoadingNames] = useState(true);
+  const [namesFetchErr, setNamesFetchErr] = useState(null);
+
+  // Admin account manager state
+  const [adminPass, setAdminPass] = useState('');
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [newRole, setNewRole] = useState('sales');
+  const [mgmtMsg, setMgmtMsg] = useState(null);
+
+  const doFetchNames = () => {
+    setLoadingNames(true);
+    setNamesFetchErr(null);
+    fetchAMNamesFromSheet()
+      .then(names => { setSheetAMNames(names); setLoadingNames(false); })
+      .catch(e => {
+        setLoadingNames(false);
+        setNamesFetchErr(e.message === 'NO_CREDS' ? 'no_creds' : 'failed');
+      });
+  };
+
+  useEffect(() => {
+    doFetchNames();
+    proxyReadAccounts().then(remote => {
+      if (remote && remote.length) {
+        const filtered = remote.filter(a => a.role !== 'am');
+        if (filtered.length) { setAccounts(filtered); localStorage.setItem('sg_accounts', JSON.stringify(filtered)); }
+      }
+    }).catch(() => {});
+  }, []);
+  const adminAccount = accounts.find(a => a.role === 'admin');
+  const flash = (msg, ok = true) => {
+    setMgmtMsg({
+      text: msg,
+      ok
+    });
+    setTimeout(() => setMgmtMsg(null), 2500);
+  };
+  const submit = () => {
+    setErr('');
+    if (role === 'am') {
+      if (!amName) {
+        setErr('Select your name');
+        return;
+      }
+      if (pass !== AM_PASS) {
+        setErr('Incorrect passcode');
+        return;
+      }
+      onLogin('am', amName);
+      return;
+    }
+    const match = accounts.find(a => a.role === role && a.pass === pass);
+    if (!match) {
+      setErr('Incorrect passcode');
+      return;
+    }
+    if (role === 'sales' && !salesName) {
+      setErr('Select your name');
+      return;
+    }
+    onLogin(role, role === 'sales' ? salesName : match.name);
+  };
+  const unlockAdmin = () => {
+    if (!adminAccount || adminPass !== adminAccount.pass) {
+      setErr('Incorrect admin passcode');
+      return;
+    }
+    setAdminUnlocked(true);
+    setErr('');
+  };
+  const addAccount = () => {
+    if (!newName.trim()) {
+      flash('Enter a name', false);
+      return;
+    }
+    if (!newPass.trim() || newPass.length < 4) {
+      flash('Passcode must be at least 4 characters', false);
+      return;
+    }
+    const dup = accounts.find(a => a.role === newRole && a.name.toLowerCase() === newName.trim().toLowerCase());
+    if (dup) {
+      flash('Name already exists for this role', false);
+      return;
+    }
+    const updated = [...accounts, {
+      id: genId(),
+      role: newRole,
+      name: newName.trim(),
+      pass: newPass.trim()
+    }];
+    setAccounts(updated);
+    saveAccounts(updated);
+    setNewName('');
+    setNewPass('');
+    flash(`Account "${newName.trim()}" created`);
+  };
+  const deleteAccount = id => {
+    if (id === 'admin-root') {
+      flash('Cannot delete the root admin', false);
+      return;
+    }
+    const updated = accounts.filter(a => a.id !== id);
+    setAccounts(updated);
+    saveAccounts(updated);
+    flash('Account deleted');
+  };
+  const changePass = (id, np) => {
+    if (!np || np.length < 4) {
+      flash('Passcode must be at least 4 characters', false);
+      return;
+    }
+    const updated = accounts.map(a => a.id === id ? {
+      ...a,
+      pass: np
+    } : a);
+    setAccounts(updated);
+    saveAccounts(updated);
+    flash('Passcode updated');
+  };
+  const roleColor = {
+    sales: '#166534',
+    admin: '#6b21a8'
+  };
+  const roleBg = {
+    sales: '#f0fdf4',
+    admin: '#faf5ff'
+  };
+  const salesAccounts = accounts.filter(a => a.role === 'sales');
+  if (adminUnlocked) {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "login-wrap"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "login-card",
+      style: {
+        width: 520,
+        padding: '32px 36px'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "login-logo"
+    }, "SellerGeni"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 16,
+        fontWeight: 600,
+        color: '#111'
+      }
+    }, "Account Manager")), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-ghost btn-sm",
+      onClick: () => {
+        setAdminUnlocked(false);
+        setAdminPass('');
+        setErr('');
+      }
+    }, "← Back to login")), mgmtMsg && /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '8px 12px',
+        borderRadius: 5,
+        marginBottom: 14,
+        fontSize: 12,
+        fontWeight: 600,
+        background: mgmtMsg.ok ? '#f0fdf4' : '#fef2f2',
+        border: `1px solid ${mgmtMsg.ok ? '#bbf7d0' : '#fecaca'}`,
+        color: mgmtMsg.ok ? '#166534' : '#dc2626'
+      }
+    }, mgmtMsg.ok ? '✓' : '✕', " ", mgmtMsg.text), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: 7,
+        padding: 12,
+        marginBottom: 16
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#1d4ed8',
+        marginBottom: 3
+      }
+    }, "Account Managers — ", sheetAMNames.length, " loaded from Sheet"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11.5,
+        color: '#3b5bdb',
+        lineHeight: 1.6
+      }
+    }, "AM names are read directly from your Google Sheet. All AMs use passcode", ' ', /*#__PURE__*/React.createElement("code", {
+      style: {
+        background: '#dbeafe',
+        padding: '1px 5px',
+        borderRadius: 3,
+        fontFamily: 'JetBrains Mono',
+        fontSize: 11
+      }
+    }, "am123"), ". No account creation needed.")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: '#fafafa',
+        border: '1px solid #e5e5e5',
+        borderRadius: 7,
+        padding: 16,
+        marginBottom: 18
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        color: '#999',
+        marginBottom: 12
+      }
+    }, "Add Sales / Admin account"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: 8,
+        marginBottom: 8
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#999',
+        marginBottom: 4
+      }
+    }, "Role"), /*#__PURE__*/React.createElement("select", {
+      className: "form-control",
+      value: newRole,
+      onChange: e => setNewRole(e.target.value)
+    }, /*#__PURE__*/React.createElement("option", {
+      value: "sales"
+    }, "Sales"), /*#__PURE__*/React.createElement("option", {
+      value: "admin"
+    }, "Admin"))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#999',
+        marginBottom: 4
+      }
+    }, "Name"), /*#__PURE__*/React.createElement("input", {
+      className: "form-control",
+      placeholder: "Full name",
+      value: newName,
+      onChange: e => setNewName(e.target.value),
+      onKeyDown: e => e.key === 'Enter' && addAccount()
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#999',
+        marginBottom: 4
+      }
+    }, "Passcode"), /*#__PURE__*/React.createElement("input", {
+      className: "form-control",
+      placeholder: "Min 4 chars",
+      value: newPass,
+      onChange: e => setNewPass(e.target.value),
+      onKeyDown: e => e.key === 'Enter' && addAccount()
+    }))), /*#__PURE__*/React.createElement("button", {
+      className: "btn btn-primary btn-sm",
+      style: {
+        width: '100%',
+        justifyContent: 'center'
+      },
+      onClick: addAccount
+    }, "+ Add account")), ['admin', 'sales'].map(r => {
+      const accs = accounts.filter(a => a.role === r);
+      if (!accs.length) return null;
+      return /*#__PURE__*/React.createElement("div", {
+        key: r,
+        style: {
+          marginBottom: 14
+        }
+      }, /*#__PURE__*/React.createElement("div", {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 8
+        }
+      }, /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 10,
+          fontWeight: 700,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          color: '#999'
+        }
+      }, r === 'sales' ? 'Sales Executives' : 'Admins'), /*#__PURE__*/React.createElement("span", {
+        style: {
+          fontSize: 10,
+          fontWeight: 600,
+          background: roleBg[r],
+          color: roleColor[r],
+          padding: '1px 7px',
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: r === 'sales' ? '#bbf7d0' : '#e9d5ff'
+        }
+      }, accs.length)), /*#__PURE__*/React.createElement("div", {
+        style: {
+          border: '1px solid #e5e5e5',
+          borderRadius: 7,
+          overflow: 'hidden'
+        }
+      }, accs.map((acc, i) => /*#__PURE__*/React.createElement(AccountRow, {
+        key: acc.id,
+        acc: acc,
+        last: i === accs.length - 1,
+        onDelete: deleteAccount,
+        onChangePass: changePass,
+        roleColor: roleColor[r]
+      }))));
+    })));
+  }
+  return /*#__PURE__*/React.createElement("div", {
+    className: "login-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "login-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "login-logo"
+  }, "SellerGeni"), /*#__PURE__*/React.createElement("div", {
+    className: "login-title"
+  }, "Retention Tracker"), /*#__PURE__*/React.createElement("div", {
+    className: "login-sub"
+  }, "Sign in to continue"), /*#__PURE__*/React.createElement("div", {
+    className: "role-grid"
+  }, [['am', '👤', 'AM'], ['sales', '💼', 'Sales'], ['admin', '⚙️', 'Admin']].map(([r, ic, lb]) => /*#__PURE__*/React.createElement("div", {
+    key: r,
+    className: `role-btn${role === r ? ' active' : ''}`,
+    onClick: () => {
+      setRole(r);
+      setPass('');
+      setAmName('');
+      setSalesName('');
+      setErr('');
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "role-icon"
+  }, ic), /*#__PURE__*/React.createElement("div", {
+    className: "role-label"
+  }, lb)))), /*#__PURE__*/React.createElement("input", {
+    className: "login-input",
+    type: "password",
+    placeholder: role === 'am' ? 'Passcode' : 'Passcode',
+    value: pass,
+    onChange: e => setPass(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && submit()
+  }),
+  role === 'am' && namesFetchErr === 'no_creds' && React.createElement('div', {
+    style:{background:'#fffbeb',border:'1px solid #fde68a',borderRadius:6,padding:'10px 12px',fontSize:12,color:'#92400e',marginBottom:10,lineHeight:1.6}
+  }, '⚠️ Tracker not configured yet. Ask your admin to open the tracker, go to ', React.createElement('strong', null, 'Config'), ', and save the Sheet credentials.'),
+  role === 'am' && namesFetchErr === 'failed' && React.createElement('div', {
+    style:{background:'#fef2f2',border:'1px solid #fecaca',borderRadius:6,padding:'10px 12px',fontSize:12,color:'#991b1b',marginBottom:10,lineHeight:1.6}
+  }, '✕ Could not load names from Sheet. Check your connection. ', React.createElement('span', {style:{textDecoration:'underline',cursor:'pointer'}, onClick:doFetchNames}, 'Try again')),
+  role === 'am' && !namesFetchErr && /*#__PURE__*/React.createElement("select", {
+    className: "login-input",
+    value: amName,
+    onChange: e => setAmName(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, loadingNames ? 'Loading names from Sheet…' : sheetAMNames.length === 0 ? 'No names found — contact admin' : 'Select your name'), sheetAMNames.map(n => /*#__PURE__*/React.createElement("option", {
+    key: n,
+    value: n
+  }, n))), role === 'sales' && /*#__PURE__*/React.createElement("select", {
+    className: "login-input",
+    value: salesName,
+    onChange: e => setSalesName(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "Select your name"), salesAccounts.map(a => /*#__PURE__*/React.createElement("option", {
+    key: a.id,
+    value: a.name
+  }, a.name))), /*#__PURE__*/React.createElement("button", {
+    className: "login-btn",
+    onClick: submit
+  }, "Sign in →"), err && /*#__PURE__*/React.createElement("div", {
+    className: "login-err"
+  }, err), role === 'admin' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 16,
+      paddingTop: 14,
+      borderTop: '1px solid #e5e5e5',
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#bbb',
+      marginBottom: 10
+    }
+  }, "Manage accounts"), /*#__PURE__*/React.createElement("input", {
+    className: "login-input",
+    type: "password",
+    placeholder: "Admin passcode to unlock",
+    value: adminPass,
+    onChange: e => setAdminPass(e.target.value),
+    onKeyDown: e => e.key === 'Enter' && unlockAdmin(),
+    style: {
+      marginBottom: 8
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost",
+    style: {
+      width: '100%',
+      justifyContent: 'center',
+      fontSize: 12
+    },
+    onClick: unlockAdmin
+  }, "Open Account Manager →"))));
+}
+function AccountRow({
+  acc,
+  last,
+  onDelete,
+  onChangePass,
+  roleColor
+}) {
+  const [editing, setEditing] = useState(false);
+  const [np, setNp] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const save = () => {
+    onChangePass(acc.id, np);
+    setEditing(false);
+    setNp('');
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '10px 14px',
+      borderBottom: last ? 'none' : '1px solid #f0f0f0',
+      background: '#fff'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 28,
+      height: 28,
+      borderRadius: '50%',
+      background: '#f5f5f5',
+      border: '1px solid #e5e5e5',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 11,
+      fontWeight: 700,
+      color: '#555',
+      flexShrink: 0
+    }
+  }, acc.name[0]?.toUpperCase()), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      minWidth: 0
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12.5,
+      fontWeight: 600,
+      color: '#111',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }
+  }, acc.name), editing ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    style: {
+      fontSize: 11.5,
+      padding: '3px 8px',
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      outline: 'none',
+      flex: 1,
+      fontFamily: 'Inter'
+    },
+    type: "password",
+    placeholder: "New passcode (min 4)",
+    value: np,
+    onChange: e => setNp(e.target.value),
+    autoFocus: true,
+    onKeyDown: e => {
+      if (e.key === 'Enter') save();
+      if (e.key === 'Escape') {
+        setEditing(false);
+        setNp('');
+      }
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-primary btn-sm",
+    onClick: save
+  }, "Save"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => {
+      setEditing(false);
+      setNp('');
+    }
+  }, "Cancel")) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 2
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#bbb',
+      fontFamily: 'JetBrains Mono',
+      letterSpacing: '0.08em'
+    }
+  }, showPass ? acc.pass : '••••••'), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: '#ccc',
+      cursor: 'pointer'
+    },
+    onClick: () => setShowPass(s => !s)
+  }, showPass ? 'hide' : 'show'))), !editing && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 5,
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      fontSize: 10,
+      padding: '3px 8px'
+    },
+    onClick: () => setEditing(true)
+  }, "Change pass"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      fontSize: 10,
+      padding: '3px 8px',
+      color: '#dc2626',
+      borderColor: '#fecaca'
+    },
+    onClick: () => {
+      if (window.confirm(`Delete account "${acc.name}"?`)) onDelete(acc.id);
+    }
+  }, "Delete")));
+}
+
+// ─── SIDE PANEL ───────────────────────────────────────────────────────────────
+function SidePanel({
+  seller,
+  role,
+  userName,
+  layerB,
+  onUpdate,
+  onClose
+}) {
+  const [tab, setTab] = useState('activity');
+  const [remarkText, setRemarkText] = useState('');
+  const b = layerB[seller['Advertiser ID']] || initLayerB();
+  const update = (field, value) => {
+    const now = today();
+    let patch = {
+      [field]: value
+    };
+    // Auto-date logic
+    if (field === 'demoStatus' && value === 'Completed' && !b.demoTakenDate) patch.demoTakenDate = now;
+    if (field === 'disposition' || field === 'demoStatus') patch.lastFollowUpDate = now;
+    if (field === 'paymentLinkSent' && value === 'Yes' && !b.paymentLinkSentDate) patch.paymentLinkSentDate = now;
+    if (field === 'closure' && value === 'Yes' && !b.closureDate) patch.closureDate = now;
+    onUpdate(seller['Advertiser ID'], patch);
+  };
+  const postRemark = () => {
+    if (!remarkText.trim()) return;
+    const entry = {
+      author: userName,
+      role: role.toUpperCase(),
+      text: remarkText.trim(),
+      ts: new Date().toISOString()
+    };
+    const newRemarks = [...(b.remarks || []), entry];
+    onUpdate(seller['Advertiser ID'], {
+      remarks: newRemarks
+    });
+    setRemarkText('');
+  };
+  const amEditable = role === 'am' || role === 'admin';
+  const salesEditable = role === 'sales' || role === 'admin';
+  return /*#__PURE__*/React.createElement("div", {
+    className: "panel-overlay",
+    onClick: e => e.target === e.currentTarget && onClose()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "panel-head"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "panel-store"
+  }, seller['Store Name']), /*#__PURE__*/React.createElement("div", {
+    className: "panel-meta"
+  }, tierBadge(seller['UPDATED TIERING']), /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-gray"
+  }, seller['Program']), /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-gray"
+  }, "WOS ", seller['WOS']), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, seller['AM Name']))), /*#__PURE__*/React.createElement("div", {
+    className: "panel-close",
+    onClick: onClose
+  }, "✕")), /*#__PURE__*/React.createElement("div", {
+    className: "panel-tabs"
+  }, ['activity', 'performance', 'remarks'].map(t => /*#__PURE__*/React.createElement("div", {
+    key: t,
+    className: `panel-tab${tab === t ? ' active' : ''}`,
+    onClick: () => setTab(t)
+  }, t === 'activity' ? 'Activity' : t === 'performance' ? 'Performance' : 'Remarks', t === 'remarks' && b.remarks?.length > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: 4,
+      background: 'var(--accent)',
+      color: '#fff',
+      borderRadius: 10,
+      fontSize: 9,
+      padding: '1px 5px'
+    }
+  }, b.remarks.length)))), /*#__PURE__*/React.createElement("div", {
+    className: "panel-body"
+  }, tab === 'performance' && /*#__PURE__*/React.createElement(PerformanceTab, {
+    seller: seller
+  }), tab === 'activity' && /*#__PURE__*/React.createElement(ActivityTab, {
+    b: b,
+    update: update,
+    amEditable: amEditable,
+    salesEditable: salesEditable
+  }), tab === 'remarks' && /*#__PURE__*/React.createElement(RemarksTab, {
+    b: b,
+    remarkText: remarkText,
+    setRemarkText: setRemarkText,
+    postRemark: postRemark
+  }))));
+}
+function PerformanceTab({
+  seller: s
+}) {
+  const metrics = [{
+    l: 'Pre GMS',
+    v: fmtNum(s['Pre GMS'])
+  }, {
+    l: 'Post GMS',
+    v: fmtNum(s['Post GMS'])
+  }, {
+    l: 'GMS Growth',
+    v: fmtPct(s['GMS Growth %'])
+  }, {
+    l: 'Pre Ad Sales',
+    v: fmtNum(s['Pre Ad Sales'])
+  }, {
+    l: 'Post Ad Sales',
+    v: fmtNum(s['Post Ad Sales'])
+  }, {
+    l: 'Ad Sales Growth',
+    v: fmtPct(s['Ad Sales Growth %'])
+  }, {
+    l: 'Pre Ad Spend',
+    v: fmtNum(s['Pre Ad Spends'])
+  }, {
+    l: 'Post Ad Spend',
+    v: fmtNum(s['Post Ad Spends'])
+  }, {
+    l: 'Ad Spend Growth',
+    v: fmtPct(s['Ad Spend Growth %'])
+  }, {
+    l: 'ROAS',
+    v: s['ROAS']
+  }, {
+    l: 'TACoS',
+    v: s['TACoS']
+  }, {
+    l: 'Onboarding Date',
+    v: fmtDate(s['Onboarding Date'])
+  }];
+  const scores = [{
+    l: 'Scale Score',
+    v: s['Scale Score']
+  }, {
+    l: 'Efficiency Score',
+    v: s['Efficiency Score']
+  }, {
+    l: 'Adaptive Score',
+    v: s['Adaptive Score']
+  }, {
+    l: 'Kanban Rating',
+    v: s['Kanban Rating']
+  }, {
+    l: 'CS Eval Score',
+    v: s['CS Evaluation Score']
+  }, {
+    l: 'Final Retention',
+    v: s['FINAL RETENTION SCORE']
+  }, {
+    l: 'Retention %',
+    v: s['Retention %'] + '%'
+  }];
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "form-section-title",
+    style: {
+      marginBottom: 12
+    }
+  }, "Performance Metrics"), /*#__PURE__*/React.createElement("div", {
+    className: "metrics-grid"
+  }, metrics.map(m => /*#__PURE__*/React.createElement("div", {
+    key: m.l,
+    className: "metric-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "metric-label"
+  }, m.l), /*#__PURE__*/React.createElement("div", {
+    className: "metric-value",
+    style: {
+      fontSize: 14
+    }
+  }, m.v)))), /*#__PURE__*/React.createElement("div", {
+    className: "form-section-title",
+    style: {
+      margin: '16px 0 12px'
+    }
+  }, "Scores & Tiering"), /*#__PURE__*/React.createElement("div", {
+    className: "metrics-grid"
+  }, scores.map(m => /*#__PURE__*/React.createElement("div", {
+    key: m.l,
+    className: "metric-card"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "metric-label"
+  }, m.l), /*#__PURE__*/React.createElement("div", {
+    className: "metric-value",
+    style: {
+      fontSize: 14
+    }
+  }, m.v)))));
+}
+function ActivityTab({
+  b,
+  update,
+  amEditable,
+  salesEditable
+}) {
+  const FG = ({
+    label,
+    children,
+    auto
+  }) => /*#__PURE__*/React.createElement("div", {
+    className: "form-group"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "form-label"
+  }, label, auto && /*#__PURE__*/React.createElement("span", {
+    className: "auto-badge",
+    style: {
+      marginLeft: 6
+    }
+  }, "auto")), children);
+  const Sel = ({
+    field,
+    opts,
+    disabled
+  }) => /*#__PURE__*/React.createElement("select", {
+    className: "form-control",
+    disabled: disabled,
+    value: b[field] || '—',
+    onChange: e => update(field, e.target.value)
+  }, opts.map(o => /*#__PURE__*/React.createElement("option", {
+    key: o
+  }, o)));
+  const Inp = ({
+    field,
+    type = 'text',
+    disabled
+  }) => /*#__PURE__*/React.createElement("input", {
+    type: type,
+    className: "form-control",
+    disabled: disabled,
+    value: b[field] || '',
+    onChange: e => update(field, e.target.value)
+  });
+  const RO = ({
+    value
+  }) => /*#__PURE__*/React.createElement("div", {
+    className: "readonly-field"
+  }, value || '—');
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "form-section"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "form-section-title"
+  }, "AM Section ", !amEditable && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'var(--text3)',
+      fontWeight: 400,
+      textTransform: 'none',
+      letterSpacing: 0
+    }
+  }, "(read-only)")), /*#__PURE__*/React.createElement("div", {
+    className: "form-grid"
+  }, /*#__PURE__*/React.createElement(FG, {
+    label: "Connected for Retention?"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "connectedRetention",
+    opts: ['—', 'Yes', 'No'],
+    disabled: !amEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Disposition / Status"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "disposition",
+    opts: DISPOSITION_OPTS,
+    disabled: !amEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Tool Demo Booked Date"
+  }, /*#__PURE__*/React.createElement(Inp, {
+    field: "demoBookedDate",
+    type: "date",
+    disabled: !amEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Tool Demo Status"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "demoStatus",
+    opts: DEMO_STATUS_OPTS,
+    disabled: !amEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Tool Demo Taken Date",
+    auto: true
+  }, amEditable ? /*#__PURE__*/React.createElement(Inp, {
+    field: "demoTakenDate",
+    type: "date",
+    disabled: false
+  }) : /*#__PURE__*/React.createElement(RO, {
+    value: fmtDate(b.demoTakenDate)
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Last Follow Up Date",
+    auto: true
+  }, /*#__PURE__*/React.createElement(RO, {
+    value: fmtDate(b.lastFollowUpDate)
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "form-section"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "form-section-title"
+  }, "Sales Section ", !salesEditable && /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: 'var(--text3)',
+      fontWeight: 400,
+      textTransform: 'none',
+      letterSpacing: 0
+    }
+  }, "(read-only)")), /*#__PURE__*/React.createElement("div", {
+    className: "form-grid"
+  }, /*#__PURE__*/React.createElement(FG, {
+    label: "Intent"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "intent",
+    opts: INTENT_OPTS,
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Amount Pitched (₹)"
+  }, /*#__PURE__*/React.createElement(Inp, {
+    field: "amountPitched",
+    type: "number",
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Duration Pitched"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "durationPitched",
+    opts: DURATION_OPTS,
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Payment Link Sent"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "paymentLinkSent",
+    opts: YN_OPTS,
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Payment Link Sent Date",
+    auto: true
+  }, /*#__PURE__*/React.createElement(RO, {
+    value: fmtDate(b.paymentLinkSentDate)
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Closure"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "closure",
+    opts: YN_OPTS,
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Closure Date",
+    auto: true
+  }, /*#__PURE__*/React.createElement(RO, {
+    value: fmtDate(b.closureDate)
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Closure Amount (₹)"
+  }, /*#__PURE__*/React.createElement(Inp, {
+    field: "closureAmount",
+    type: "number",
+    disabled: !salesEditable
+  })), /*#__PURE__*/React.createElement(FG, {
+    label: "Closure Duration"
+  }, /*#__PURE__*/React.createElement(Sel, {
+    field: "closureDuration",
+    opts: DURATION_OPTS,
+    disabled: !salesEditable
+  })))));
+}
+function RemarksTab({
+  b,
+  remarkText,
+  setRemarkText,
+  postRemark
+}) {
+  const remarks = b.remarks || [];
+  const roleColor = {
+    AM: 'var(--blue)',
+    SALES: 'var(--green)',
+    ADMIN: 'var(--purple)'
+  };
+  const roleIcon = {
+    AM: '👤',
+    SALES: '💼',
+    ADMIN: '⚙️'
+  };
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "remarks-post-row",
+    style: {
+      marginBottom: 12,
+      flexDirection: 'column',
+      alignItems: 'stretch'
+    }
+  }, /*#__PURE__*/React.createElement("textarea", {
+    className: "remarks-input",
+    placeholder: "Add a remark...",
+    value: remarkText,
+    onChange: e => setRemarkText(e.target.value)
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-primary btn-sm",
+    onClick: postRemark
+  }, "Post Remark"))), remarks.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "empty-state",
+    style: {
+      padding: '30px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-icon"
+  }, "💬"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-text"
+  }, "No remarks yet")), /*#__PURE__*/React.createElement("div", {
+    className: "timeline"
+  }, [...remarks].reverse().map((r, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "timeline-item"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "timeline-dot",
+    style: {
+      background: `${roleColor[r.role]}22`,
+      color: roleColor[r.role]
+    }
+  }, roleIcon[r.role]), /*#__PURE__*/React.createElement("div", {
+    className: "timeline-content"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", {
+    className: "timeline-author"
+  }, r.author), /*#__PURE__*/React.createElement("span", {
+    className: "timeline-role"
+  }, r.role), /*#__PURE__*/React.createElement("span", {
+    className: "timeline-time"
+  }, new Date(r.ts).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "timeline-msg"
+  }, r.text))))));
+}
+
+// ─── SELLER LIST ──────────────────────────────────────────────────────────────
+// ─── SORTABLE HEADER ──────────────────────────────────────────────────────────
+function SortableTh({
+  col,
+  sortKey,
+  sortDir,
+  onSort,
+  children,
+  filterEl
+}) {
+  const active = sortKey === col;
+  return /*#__PURE__*/React.createElement("th", {
+    style: {
+      position: 'relative',
+      userSelect: 'none',
+      minWidth: filterEl ? 140 : undefined
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    },
+    onClick: () => onSort(col)
+  }, /*#__PURE__*/React.createElement("span", null, children), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: active ? 'var(--accent)' : 'var(--text3)',
+      lineHeight: 1
+    }
+  }, active ? sortDir === 'asc' ? '▲' : '▼' : '⇅')), filterEl && /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation()
+  }, filterEl)));
+}
+function ColSearch({
+  value,
+  onChange,
+  placeholder = 'Search...'
+}) {
+  return /*#__PURE__*/React.createElement("input", {
+    value: value,
+    onChange: e => onChange(e.target.value),
+    placeholder: placeholder,
+    style: {
+      width: '100%',
+      background: '#fff',
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '3px 6px',
+      color: '#111',
+      fontSize: 10.5,
+      fontFamily: 'Inter',
+      outline: 'none'
+    }
+  });
+}
+function ColSelect({
+  value,
+  onChange,
+  opts
+}) {
+  return /*#__PURE__*/React.createElement("select", {
+    value: value,
+    onChange: e => onChange(e.target.value),
+    style: {
+      width: '100%',
+      background: '#fff',
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '3px 5px',
+      color: value === 'All' ? '#999' : '#111',
+      fontSize: 10.5,
+      fontFamily: 'Inter',
+      outline: 'none',
+      cursor: 'pointer'
+    }
+  }, opts.map(o => /*#__PURE__*/React.createElement("option", {
+    key: o
+  }, o)));
+}
+function SellerList({
+  sellers,
+  layerB,
+  role,
+  userName,
+  onUpdate
+}) {
+  const [selected, setSelected] = useState(null);
+  const [sortKey, setSortKey] = useState('Store Name');
+  const [sortDir, setSortDir] = useState('asc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Per-column search/filter state
+  const [colSearch, setColSearch] = useState({
+    storeName: '',
+    tier: 'All',
+    program: 'All',
+    wos: '',
+    team: 'All',
+    connected: 'All',
+    disposition: 'All',
+    demoStatus: 'All',
+    intent: 'All',
+    amountPitched: '',
+    paymentLink: 'All',
+    closure: 'All',
+    amName: 'All'
+  });
+  const updateCol = (key, val) => setColSearch(p => ({
+    ...p,
+    [key]: val
+  }));
+
+  // Source: AM sees only their own sellers
+  const source = useMemo(() => {
+    if (role === 'am') return sellers.filter(s => s['AM Name'] === userName);
+    if (role === 'sales') return sellers.filter(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      return b.disposition === 'Demo Booked' || b.disposition === 'Interested';
+    });
+    return sellers;
+  }, [sellers, role, userName, layerB]);
+  const teams = useMemo(() => ['All', ...new Set(source.map(s => s['Team Name']).filter(Boolean).sort())], [source]);
+  const amNames = useMemo(() => ['All', ...new Set(source.map(s => s['AM Name']).filter(Boolean).sort())], [source]);
+  const getCellVal = useCallback((s, key) => {
+    const b = layerB[s['Advertiser ID']] || {};
+    const map = {
+      'Store Name': s['Store Name'] || '',
+      'AM Name': s['AM Name'] || '',
+      'Team Name': s['Team Name'] || '',
+      'Tier': s['UPDATED TIERING'] || '',
+      'Program': s['Program'] || '',
+      'WOS': Number(s['WOS']) || 0,
+      'Connected?': b.connectedRetention || '—',
+      'Disposition': b.disposition || '—',
+      'Demo Status': b.demoStatus || '—',
+      'Last Follow Up': b.lastFollowUpDate || '',
+      'Intent': b.intent || '—',
+      'Amount Pitched': Number(b.amountPitched) || 0,
+      'Payment Link': b.paymentLinkSent || '—',
+      'Closure': b.closure || '—'
+    };
+    return map[key] ?? '';
+  }, [layerB]);
+  const filtered = useMemo(() => {
+    let list = [...source];
+    const c = colSearch;
+    const ql = v => v.toLowerCase();
+    if (c.storeName) list = list.filter(s => s['Store Name']?.toLowerCase().includes(ql(c.storeName)));
+    if (c.tier !== 'All') list = list.filter(s => s['UPDATED TIERING'] === c.tier);
+    if (c.program !== 'All') list = list.filter(s => s['Program'] === c.program);
+    if (c.wos) list = list.filter(s => String(s['WOS']).includes(c.wos));
+    if (c.team !== 'All') list = list.filter(s => s['Team Name'] === c.team);
+    if (c.amName !== 'All') list = list.filter(s => s['AM Name'] === c.amName);
+    if (c.connected !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.connectedRetention || '—') === c.connected);
+    if (c.disposition !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.disposition || '—') === c.disposition);
+    if (c.demoStatus !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.demoStatus || '—') === c.demoStatus);
+    if (c.intent !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.intent || '—') === c.intent);
+    if (c.paymentLink !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') === c.paymentLink);
+    if (c.closure !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === c.closure);
+    if (c.amountPitched) list = list.filter(s => String(layerB[s['Advertiser ID']]?.amountPitched || '').includes(c.amountPitched));
+
+    // Sort
+    list.sort((a, b) => {
+      let av = getCellVal(a, sortKey);
+      let bv = getCellVal(b, sortKey);
+      if (typeof av === 'number' && typeof bv === 'number') return sortDir === 'asc' ? av - bv : bv - av;
+      av = String(av).toLowerCase();
+      bv = String(bv).toLowerCase();
+      return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    return list;
+  }, [source, colSearch, sortKey, sortDir, layerB, getCellVal]);
+  const onSort = col => {
+    if (sortKey === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');else {
+      setSortKey(col);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
+  const activeFilters = Object.entries(colSearch).filter(([k, v]) => v !== '' && v !== 'All').length;
+  const clearFilters = () => {
+    setColSearch({
+      storeName: '',
+      tier: 'All',
+      program: 'All',
+      wos: '',
+      team: 'All',
+      connected: 'All',
+      disposition: 'All',
+      demoStatus: 'All',
+      intent: 'All',
+      amountPitched: '',
+      paymentLink: 'All',
+      closure: 'All',
+      amName: 'All'
+    });
+    setPage(1);
+  };
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  // AM columns — no team/amName since AM sees only own
+  const renderAMTable = () => /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Store Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.storeName,
+      onChange: v => updateCol('storeName', v),
+      placeholder: "Search name..."
+    })
+  }, "Store Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Tier",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.tier,
+      onChange: v => updateCol('tier', v),
+      opts: TIERS
+    })
+  }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Program",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.program,
+      onChange: v => updateCol('program', v),
+      opts: PROGRAMS
+    })
+  }, "Program"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "WOS",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.wos,
+      onChange: v => updateCol('wos', v),
+      placeholder: "e.g. 12"
+    })
+  }, "WOS"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Connected?",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.connected,
+      onChange: v => updateCol('connected', v),
+      opts: ['All', 'Yes', 'No', '—']
+    })
+  }, "Connected?"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Disposition",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.disposition,
+      onChange: v => updateCol('disposition', v),
+      opts: ['All', ...DISPOSITION_OPTS.slice(1)]
+    })
+  }, "Disposition"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Demo Status",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.demoStatus,
+      onChange: v => updateCol('demoStatus', v),
+      opts: ['All', ...DEMO_STATUS_OPTS.slice(1)]
+    })
+  }, "Demo Status"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Last Follow Up",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort
+  }, "Last Follow Up"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Intent",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.intent,
+      onChange: v => updateCol('intent', v),
+      opts: ['All', ...INTENT_OPTS.slice(1)]
+    })
+  }, "Intent"))), /*#__PURE__*/React.createElement("tbody", null, paged.map(s => {
+    const b = layerB[s['Advertiser ID']] || {};
+    return /*#__PURE__*/React.createElement("tr", {
+      key: s['Advertiser ID'],
+      onClick: () => setSelected(s)
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "name-cell"
+    }, s['Store Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Program'])), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'JetBrains Mono',
+        fontSize: 12
+      }
+    }, s['WOS'], "w"), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: `badge ${b.connectedRetention === 'Yes' ? 'badge-green' : b.connectedRetention === 'No' ? 'badge-red' : 'badge-gray'}`
+    }, b.connectedRetention || '—')), /*#__PURE__*/React.createElement("td", null, dispositionBadge(b.disposition)), /*#__PURE__*/React.createElement("td", null, demoStatusBadge(b.demoStatus)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontSize: 11,
+        color: 'var(--text3)'
+      }
+    }, fmtDate(b.lastFollowUpDate)), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)));
+  })));
+  const renderSalesTable = () => /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Store Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.storeName,
+      onChange: v => updateCol('storeName', v),
+      placeholder: "Search name..."
+    })
+  }, "Store Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "AM Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.amName,
+      onChange: v => updateCol('amName', v),
+      opts: amNames
+    })
+  }, "AM Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Tier",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.tier,
+      onChange: v => updateCol('tier', v),
+      opts: TIERS
+    })
+  }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Program",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.program,
+      onChange: v => updateCol('program', v),
+      opts: PROGRAMS
+    })
+  }, "Program"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Intent",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.intent,
+      onChange: v => updateCol('intent', v),
+      opts: ['All', ...INTENT_OPTS.slice(1)]
+    })
+  }, "Intent"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Amount Pitched",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.amountPitched,
+      onChange: v => updateCol('amountPitched', v),
+      placeholder: "Filter amount..."
+    })
+  }, "Amount Pitched"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Payment Link",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.paymentLink,
+      onChange: v => updateCol('paymentLink', v),
+      opts: ['All', 'Yes', 'No', '—']
+    })
+  }, "Payment Link"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Closure",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.closure,
+      onChange: v => updateCol('closure', v),
+      opts: ['All', 'Yes', 'No', '—']
+    })
+  }, "Closure"))), /*#__PURE__*/React.createElement("tbody", null, paged.map(s => {
+    const b = layerB[s['Advertiser ID']] || {};
+    return /*#__PURE__*/React.createElement("tr", {
+      key: s['Advertiser ID'],
+      onClick: () => setSelected(s)
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "name-cell"
+    }, s['Store Name']), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: 'var(--text3)'
+      }
+    }, s['AM Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Program'])), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'JetBrains Mono',
+        fontSize: 12
+      }
+    }, b.amountPitched ? '₹' + Number(b.amountPitched).toLocaleString('en-IN') : '—'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: `badge ${b.paymentLinkSent === 'Yes' ? 'badge-green' : 'badge-gray'}`
+    }, b.paymentLinkSent || '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: `badge ${b.closure === 'Yes' ? 'badge-green' : b.closure === 'No' ? 'badge-red' : 'badge-gray'}`
+    }, b.closure || '—')));
+  })));
+  const renderAdminTable = () => /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Store Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.storeName,
+      onChange: v => updateCol('storeName', v),
+      placeholder: "Search name..."
+    })
+  }, "Store Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "AM Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.amName,
+      onChange: v => updateCol('amName', v),
+      opts: amNames
+    })
+  }, "AM Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Team Name",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.team,
+      onChange: v => updateCol('team', v),
+      opts: teams
+    })
+  }, "Team"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Tier",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.tier,
+      onChange: v => updateCol('tier', v),
+      opts: TIERS
+    })
+  }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Program",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.program,
+      onChange: v => updateCol('program', v),
+      opts: PROGRAMS
+    })
+  }, "Program"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "WOS",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort
+  }, "WOS"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Connected?",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.connected,
+      onChange: v => updateCol('connected', v),
+      opts: ['All', 'Yes', 'No', '—']
+    })
+  }, "Connected?"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Disposition",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.disposition,
+      onChange: v => updateCol('disposition', v),
+      opts: ['All', ...DISPOSITION_OPTS.slice(1)]
+    })
+  }, "Disposition"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Demo Status",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.demoStatus,
+      onChange: v => updateCol('demoStatus', v),
+      opts: ['All', ...DEMO_STATUS_OPTS.slice(1)]
+    })
+  }, "Demo Status"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Intent",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.intent,
+      onChange: v => updateCol('intent', v),
+      opts: ['All', ...INTENT_OPTS.slice(1)]
+    })
+  }, "Intent"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Closure",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.closure,
+      onChange: v => updateCol('closure', v),
+      opts: ['All', 'Yes', 'No', '—']
+    })
+  }, "Closure"))), /*#__PURE__*/React.createElement("tbody", null, paged.map(s => {
+    const b = layerB[s['Advertiser ID']] || {};
+    return /*#__PURE__*/React.createElement("tr", {
+      key: s['Advertiser ID'],
+      onClick: () => setSelected(s)
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "name-cell"
+    }, s['Store Name']), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: 'var(--text3)'
+      }
+    }, s['AM Name']), /*#__PURE__*/React.createElement("td", {
+      style: {
+        color: 'var(--text3)'
+      }
+    }, s['Team Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Program'])), /*#__PURE__*/React.createElement("td", {
+      style: {
+        fontFamily: 'JetBrains Mono',
+        fontSize: 12
+      }
+    }, s['WOS'], "w"), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: `badge ${b.connectedRetention === 'Yes' ? 'badge-green' : b.connectedRetention === 'No' ? 'badge-red' : 'badge-gray'}`
+    }, b.connectedRetention || '—')), /*#__PURE__*/React.createElement("td", null, dispositionBadge(b.disposition)), /*#__PURE__*/React.createElement("td", null, demoStatusBadge(b.demoStatus)), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: `badge ${b.closure === 'Yes' ? 'badge-green' : b.closure === 'No' ? 'badge-red' : 'badge-gray'}`
+    }, b.closure || '—')));
+  })));
+
+  // Page number buttons — show window of 5 around current page
+  const pageNums = () => {
+    const pages = [];
+    const delta = 2;
+    const left = Math.max(1, page - delta);
+    const right = Math.min(totalPages, page + delta);
+    if (left > 1) {
+      pages.push(1);
+      if (left > 2) pages.push('…');
+    }
+    for (let i = left; i <= right; i++) pages.push(i);
+    if (right < totalPages) {
+      if (right < totalPages - 1) pages.push('…');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+  const pgBtn = (label, action, disabled, active = false) => /*#__PURE__*/React.createElement("button", {
+    key: label,
+    onClick: action,
+    disabled: disabled,
+    style: {
+      minWidth: 30,
+      height: 28,
+      padding: '0 8px',
+      border: '1px solid',
+      borderRadius: 4,
+      cursor: disabled ? 'default' : 'pointer',
+      fontSize: 12,
+      fontWeight: active ? 700 : 400,
+      background: active ? '#111' : '#fff',
+      color: active ? '#fff' : disabled ? '#ccc' : '#555',
+      borderColor: active ? '#111' : disabled ? '#eee' : '#e5e5e5',
+      fontFamily: 'Inter'
+    }
+  }, label);
+  const firstEntry = filtered.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastEntry = Math.min(page * pageSize, filtered.length);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "content"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, role === 'am' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: '#f5f5f5',
+      border: '1px solid #e5e5e5',
+      borderRadius: 'var(--radius-sm)',
+      padding: '4px 10px',
+      fontSize: 12,
+      fontWeight: 600,
+      color: '#333'
+    }
+  }, userName, " — ", source.length, " sellers"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text3)'
+    }
+  }, "Showing ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: 'var(--text)'
+    }
+  }, firstEntry, "–", lastEntry), " of ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: 'var(--text)'
+    }
+  }, filtered.length), " entries"), activeFilters > 0 && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: clearFilters,
+    style: {
+      color: 'var(--amber)',
+      borderColor: '#fcd34d'
+    }
+  }, "✕ Clear ", activeFilters, " filter", activeFilters > 1 ? 's' : '')), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "Show"), /*#__PURE__*/React.createElement("select", {
+    value: pageSize,
+    onChange: e => {
+      setPageSize(Number(e.target.value));
+      setPage(1);
+    },
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '3px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: '#fff',
+      color: '#333',
+      cursor: 'pointer'
+    }
+  }, [10, 25, 50, 100].map(n => /*#__PURE__*/React.createElement("option", {
+    key: n,
+    value: n
+  }, n, " entries"))))), /*#__PURE__*/React.createElement("div", {
+    className: "table-wrap"
+  }, filtered.length === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "empty-state"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-icon"
+  }, "📭"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-text"
+  }, "No sellers match your filters"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-sub"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      marginTop: 10
+    },
+    onClick: clearFilters
+  }, "Clear all filters"))) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, role === 'am' && renderAMTable(), role === 'sales' && renderSalesTable(), role === 'admin' && renderAdminTable())), filtered.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "Page ", page, " of ", totalPages), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 4
+    }
+  }, pgBtn('‹‹', () => setPage(1), page === 1), pgBtn('‹', () => setPage(p => Math.max(1, p - 1)), page === 1), pageNums().map((n, i) => n === '…' ? /*#__PURE__*/React.createElement("span", {
+    key: `e${i}`,
+    style: {
+      padding: '0 4px',
+      color: '#ccc',
+      fontSize: 12,
+      lineHeight: '28px'
+    }
+  }, "…") : pgBtn(n, () => setPage(n), false, n === page)), pgBtn('›', () => setPage(p => Math.min(totalPages, p + 1)), page === totalPages), pgBtn('››', () => setPage(totalPages), page === totalPages))), selected && /*#__PURE__*/React.createElement(SidePanel, {
+    seller: selected,
+    role: role,
+    userName: userName,
+    layerB: layerB,
+    onUpdate: onUpdate,
+    onClose: () => setSelected(null)
+  }));
+}
+
+// ─── ACTIVITY TRACKER ────────────────────────────────────────────────────────
+const TRACKER_METRICS = [{
+  key: 'demoBooked',
+  label: 'Demo Booked',
+  color: '#2563eb',
+  field: 'disposition',
+  match: v => v === 'Demo Booked'
+}, {
+  key: 'demoDone',
+  label: 'Demo Completed',
+  color: '#16a34a',
+  field: 'demoStatus',
+  match: v => v === 'Completed'
+}, {
+  key: 'closure',
+  label: 'Closure Won',
+  color: '#111111',
+  field: 'closure',
+  match: v => v === 'Yes'
+}, {
+  key: 'paymentLink',
+  label: 'Payment Link',
+  color: '#d97706',
+  field: 'paymentLinkSent',
+  match: v => v === 'Yes'
+}, {
+  key: 'connected',
+  label: 'Connected',
+  color: '#7c3aed',
+  field: 'connectedRetention',
+  match: v => v === 'Yes'
+}];
+function ActivityTracker({
+  sellers,
+  layerB
+}) {
+  const [view, setView] = useState('weekly');
+  const [cursor, setCursor] = useState(new Date());
+  const [filterAM, setFilterAM] = useState('All');
+  const [vizMode, setVizMode] = useState('heatmap'); // heatmap | bar | table
+  const [metricKey, setMetricKey] = useState('demoBooked');
+  const amNames = useMemo(() => ['All', ...new Set(sellers.map(s => s['AM Name']).filter(Boolean).sort())], [sellers]);
+
+  // Build activity index: date → am → { demoBooked, demoDone, closure, paymentLink, connected }
+  const activityIndex = useMemo(() => {
+    const idx = {}; // date string → am → counts
+    sellers.forEach(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      const am = s['AM Name'] || 'Unknown';
+      TRACKER_METRICS.forEach(m => {
+        const dateField = m.key === 'demoBooked' ? b.demoBookedDate : m.key === 'demoDone' ? b.demoTakenDate : m.key === 'closure' ? b.closureDate : m.key === 'paymentLink' ? b.paymentLinkSentDate : m.key === 'connected' ? b.lastFollowUpDate : '';
+        if (!dateField || !m.match(b[m.field])) return;
+        if (!idx[dateField]) idx[dateField] = {};
+        if (!idx[dateField][am]) idx[dateField][am] = {
+          demoBooked: 0,
+          demoDone: 0,
+          closure: 0,
+          paymentLink: 0,
+          connected: 0
+        };
+        idx[dateField][am][m.key]++;
+      });
+    });
+    return idx;
+  }, [sellers, layerB]);
+  const metric = TRACKER_METRICS.find(m => m.key === metricKey);
+
+  // Generate date range for current view
+  const dateRange = useMemo(() => {
+    const dates = [];
+    if (view === 'daily') {
+      dates.push(dateStr(cursor));
+    } else if (view === 'weekly') {
+      const mon = weekStart(cursor);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(mon);
+        d.setDate(d.getDate() + i);
+        dates.push(dateStr(d));
+      }
+    } else {
+      // monthly
+      const y = cursor.getFullYear(),
+        m = cursor.getMonth();
+      const days = new Date(y, m + 1, 0).getDate();
+      for (let i = 1; i <= days; i++) dates.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+    }
+    return dates;
+  }, [view, cursor]);
+
+  // AMs to show
+  const visibleAMs = useMemo(() => {
+    const allAMs = [...new Set(sellers.map(s => s['AM Name']).filter(Boolean).sort())];
+    return filterAM === 'All' ? allAMs : [filterAM];
+  }, [sellers, filterAM]);
+
+  // Count per date per AM for selected metric
+  const getCount = (date, am) => activityIndex[date]?.[am]?.[metricKey] || 0;
+  const getTotal = date => visibleAMs.reduce((sum, am) => sum + getCount(date, am), 0);
+  const getAMTotal = am => dateRange.reduce((sum, d) => sum + getCount(d, am), 0);
+  const getGrandTotal = () => dateRange.reduce((sum, d) => sum + getTotal(d), 0);
+  const maxVal = Math.max(1, ...dateRange.map(d => filterAM === 'All' ? getTotal(d) : getCount(d, filterAM)));
+
+  // Navigation
+  const move = dir => {
+    setCursor(prev => {
+      const d = new Date(prev);
+      if (view === 'daily') d.setDate(d.getDate() + dir);
+      if (view === 'weekly') d.setDate(d.getDate() + dir * 7);
+      if (view === 'monthly') d.setMonth(d.getMonth() + dir);
+      return d;
+    });
+  };
+  const rangeLabel = () => {
+    if (view === 'daily') return cursor.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+    if (view === 'weekly') {
+      const mon = weekStart(cursor);
+      const sun = new Date(mon);
+      sun.setDate(sun.getDate() + 6);
+      return `${mon.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short'
+      })} – ${sun.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })}`;
+    }
+    return cursor.toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+  const fmtLabel = d => {
+    const dt = new Date(d + 'T00:00:00');
+    if (view === 'monthly') return dt.getDate();
+    return dt.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric'
+    });
+  };
+  const heatColor = val => {
+    if (!val) return '#f5f5f5';
+    const pct = val / maxVal;
+    const c = metric.color;
+    // Interpolate opacity
+    if (pct < 0.25) return c + '33';
+    if (pct < 0.5) return c + '77';
+    if (pct < 0.75) return c + 'bb';
+    return c;
+  };
+  const todayStr = today();
+  return /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-wrap",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-head",
+    style: {
+      flexWrap: 'wrap',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: metric.color
+    }
+  }), "Activity Tracker"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+      marginLeft: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("select", {
+    value: metricKey,
+    onChange: e => setMetricKey(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 11.5,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: '#fff',
+      color: '#333',
+      cursor: 'pointer'
+    }
+  }, TRACKER_METRICS.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.key,
+    value: m.key
+  }, m.label))), /*#__PURE__*/React.createElement("select", {
+    value: filterAM,
+    onChange: e => setFilterAM(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 11.5,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: '#fff',
+      color: '#333',
+      cursor: 'pointer',
+      maxWidth: 150
+    }
+  }, amNames.map(n => /*#__PURE__*/React.createElement("option", {
+    key: n
+  }, n))), /*#__PURE__*/React.createElement("div", {
+    className: "tab-pills"
+  }, [['heatmap', '⬛'], ['bar', '▬'], ['table', '≡']].map(([v, ic]) => /*#__PURE__*/React.createElement("div", {
+    key: v,
+    className: `tab-pill${vizMode === v ? ' active' : ''}`,
+    onClick: () => setVizMode(v),
+    title: v
+  }, ic))), /*#__PURE__*/React.createElement("div", {
+    className: "tab-pills"
+  }, ['daily', 'weekly', 'monthly'].map(v => /*#__PURE__*/React.createElement("div", {
+    key: v,
+    className: `tab-pill${view === v ? ' active' : ''}`,
+    onClick: () => setView(v)
+  }, v.charAt(0).toUpperCase() + v.slice(1)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-btn",
+    onClick: () => move(-1)
+  }, "‹"), /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-btn",
+    onClick: () => setCursor(new Date())
+  }, "•"), /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-btn",
+    onClick: () => move(1)
+  }, "›")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 18px',
+      borderBottom: '1px solid #f0f0f0',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 600,
+      color: '#333'
+    }
+  }, rangeLabel()), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text3)'
+    }
+  }, "Total ", /*#__PURE__*/React.createElement("strong", {
+    style: {
+      color: metric.color,
+      fontFamily: 'JetBrains Mono'
+    }
+  }, getGrandTotal()), " ", metric.label.toLowerCase())), vizMode === 'heatmap' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '16px 18px',
+      overflowX: 'auto'
+    }
+  }, filterAM === 'All' ?
+  /*#__PURE__*/
+  // All AMs: one row per AM, columns = dates
+  React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: `120px repeat(${dateRange.length},1fr)`,
+      gap: 3,
+      marginBottom: 4
+    }
+  }, /*#__PURE__*/React.createElement("div", null), dateRange.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d,
+    style: {
+      fontSize: 9,
+      color: '#bbb',
+      textAlign: 'center',
+      fontWeight: d === todayStr ? 700 : 400,
+      color: d === todayStr ? '#111' : '#bbb'
+    }
+  }, fmtLabel(d)))), visibleAMs.map(am => /*#__PURE__*/React.createElement("div", {
+    key: am,
+    style: {
+      display: 'grid',
+      gridTemplateColumns: `120px repeat(${dateRange.length},1fr)`,
+      gap: 3,
+      marginBottom: 3,
+      alignItems: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#555',
+      fontWeight: 500,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      paddingRight: 8
+    }
+  }, am.split(' ')[0]), dateRange.map(d => {
+    const v = getCount(d, am);
+    return /*#__PURE__*/React.createElement("div", {
+      key: d,
+      title: `${am} · ${d} · ${v} ${metric.label}`,
+      style: {
+        height: 22,
+        borderRadius: 3,
+        background: heatColor(v),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 9,
+        fontWeight: 700,
+        color: v ? '#fff' : 'transparent',
+        border: d === todayStr ? `1px solid ${metric.color}` : '1px solid transparent'
+      }
+    }, v || '');
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: `120px repeat(${dateRange.length},1fr)`,
+      gap: 3,
+      marginTop: 6,
+      paddingTop: 6,
+      borderTop: '1px solid #f0f0f0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: '#999',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em'
+    }
+  }, "Total"), dateRange.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d,
+    style: {
+      textAlign: 'center',
+      fontSize: 10,
+      fontWeight: 700,
+      color: getTotal(d) ? metric.color : '#ddd',
+      fontFamily: 'JetBrains Mono'
+    }
+  }, getTotal(d) || '')))) :
+  /*#__PURE__*/
+  // Single AM: one big heatmap row
+  React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 4,
+      flexWrap: 'wrap'
+    }
+  }, dateRange.map(d => {
+    const v = getCount(d, filterAM);
+    return /*#__PURE__*/React.createElement("div", {
+      key: d,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 3
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      title: `${d} · ${v}`,
+      style: {
+        width: 36,
+        height: 36,
+        borderRadius: 5,
+        background: heatColor(v),
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 12,
+        fontWeight: 700,
+        color: v ? '#fff' : '#ccc',
+        border: d === todayStr ? `2px solid ${metric.color}` : '2px solid transparent'
+      }
+    }, v || '0'), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: '#bbb',
+        fontWeight: d === todayStr ? 700 : 400,
+        color: d === todayStr ? '#111' : '#bbb'
+      }
+    }, fmtLabel(d)));
+  })))), vizMode === 'bar' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '16px 18px',
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      gap: view === 'monthly' ? 3 : 8,
+      minHeight: 120
+    }
+  }, dateRange.map(d => {
+    const total = filterAM === 'All' ? getTotal(d) : getCount(d, filterAM);
+    const pct = maxVal ? total / maxVal * 100 : 0;
+    const isToday = d === todayStr;
+    return /*#__PURE__*/React.createElement("div", {
+      key: d,
+      style: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        flex: 1,
+        minWidth: view === 'monthly' ? 8 : 28
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: total ? metric.color : 'transparent',
+        fontFamily: 'JetBrains Mono'
+      }
+    }, total || ''), filterAM === 'All' ?
+    /*#__PURE__*/
+    // Stacked by AM
+    React.createElement("div", {
+      style: {
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
+        justifyContent: 'flex-end',
+        height: 80
+      }
+    }, visibleAMs.filter(am => getCount(d, am) > 0).map((am, i) => /*#__PURE__*/React.createElement("div", {
+      key: am,
+      title: `${am}: ${getCount(d, am)}`,
+      style: {
+        width: '100%',
+        height: `${getCount(d, am) / maxVal * 80}px`,
+        minHeight: 3,
+        background: metric.color,
+        opacity: 0.5 + i * 0.1,
+        borderRadius: 2
+      }
+    }))) : /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: '100%',
+        height: 80,
+        display: 'flex',
+        alignItems: 'flex-end'
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: '100%',
+        height: `${pct}%`,
+        minHeight: total ? 3 : 0,
+        background: metric.color,
+        borderRadius: 3,
+        border: isToday ? `2px solid #111` : 'none'
+      }
+    })), view !== 'monthly' && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: isToday ? '#111' : '#bbb',
+        fontWeight: isToday ? 700 : 400,
+        textAlign: 'center',
+        lineHeight: 1.3
+      }
+    }, fmtLabel(d)));
+  })), view === 'monthly' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginTop: 4
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#bbb'
+    }
+  }, "1"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 9,
+      color: '#bbb'
+    }
+  }, dateRange.length))), vizMode === 'table' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", {
+    style: {
+      width: '100%',
+      borderCollapse: 'collapse',
+      fontSize: 11.5
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: '#fafafa'
+    }
+  }, /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '8px 14px',
+      textAlign: 'left',
+      fontWeight: 700,
+      fontSize: 10,
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: '#999',
+      borderBottom: '1px solid #e5e5e5',
+      whiteSpace: 'nowrap'
+    }
+  }, "AM Name"), dateRange.map(d => /*#__PURE__*/React.createElement("th", {
+    key: d,
+    style: {
+      padding: '8px 6px',
+      textAlign: 'center',
+      fontWeight: d === todayStr ? 700 : 600,
+      fontSize: 10,
+      color: d === todayStr ? metric.color : '#999',
+      borderBottom: '1px solid #e5e5e5',
+      whiteSpace: 'nowrap',
+      minWidth: 40
+    }
+  }, fmtLabel(d))), /*#__PURE__*/React.createElement("th", {
+    style: {
+      padding: '8px 14px',
+      textAlign: 'center',
+      fontWeight: 700,
+      fontSize: 10,
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: metric.color,
+      borderBottom: '1px solid #e5e5e5'
+    }
+  }, "Total"))), /*#__PURE__*/React.createElement("tbody", null, visibleAMs.map((am, ri) => /*#__PURE__*/React.createElement("tr", {
+    key: am,
+    style: {
+      borderBottom: '1px solid #f5f5f5',
+      background: ri % 2 ? '#fafafa' : '#fff'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      fontWeight: 600,
+      color: '#333',
+      whiteSpace: 'nowrap'
+    }
+  }, am), dateRange.map(d => {
+    const v = getCount(d, am);
+    return /*#__PURE__*/React.createElement("td", {
+      key: d,
+      style: {
+        padding: '7px 6px',
+        textAlign: 'center',
+        fontFamily: 'JetBrains Mono',
+        fontSize: 12,
+        color: v ? metric.color : '#ddd',
+        fontWeight: v ? 700 : 400,
+        background: d === todayStr ? `${metric.color}08` : 'transparent'
+      }
+    }, v || '—');
+  }), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontSize: 13,
+      fontWeight: 700,
+      color: metric.color
+    }
+  }, getAMTotal(am) || '—'))), /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: '#fafafa',
+      borderTop: '2px solid #e5e5e5'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '8px 14px',
+      fontWeight: 700,
+      fontSize: 11,
+      color: '#999',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em'
+    }
+  }, "Total"), dateRange.map(d => /*#__PURE__*/React.createElement("td", {
+    key: d,
+    style: {
+      padding: '8px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontSize: 12,
+      fontWeight: 700,
+      color: getTotal(d) ? metric.color : '#ddd'
+    }
+  }, getTotal(d) || '—')), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '8px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontSize: 14,
+      fontWeight: 700,
+      color: metric.color
+    }
+  }, getGrandTotal()))))));
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({
+  sellers,
+  layerB
+}) {
+  const [amView, setAmView] = useState('leaderboard');
+  const stats = useMemo(() => {
+    let total = sellers.length,
+      connected = 0,
+      demoBooked = 0,
+      demoDone = 0,
+      interested = 0,
+      notInterested = 0;
+    let pitched = 0,
+      paymentSent = 0,
+      closed = 0,
+      closedRevenue = 0;
+    const amMap = {};
+    const salesMap = {};
+    sellers.forEach(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      const am = s['AM Name'] || 'Unknown';
+      if (!amMap[am]) amMap[am] = {
+        name: am,
+        team: s['Team Name'],
+        connected: 0,
+        demoBooked: 0,
+        demoDone: 0,
+        interested: 0,
+        notInterested: 0
+      };
+      if (b.connectedRetention === 'Yes') {
+        connected++;
+        amMap[am].connected++;
+      }
+      if (b.disposition === 'Demo Booked') {
+        demoBooked++;
+        amMap[am].demoBooked++;
+      }
+      if (b.demoStatus === 'Completed') {
+        demoDone++;
+        amMap[am].demoDone++;
+      }
+      if (b.disposition === 'Interested') {
+        interested++;
+        amMap[am].interested++;
+      }
+      if (b.disposition === 'Not Interested') {
+        notInterested++;
+        amMap[am].notInterested++;
+      }
+      if (b.amountPitched) pitched++;
+      if (b.paymentLinkSent === 'Yes') paymentSent++;
+      if (b.closure === 'Yes') {
+        closed++;
+        closedRevenue += Number(b.closureAmount || 0);
+      }
+      if (b.amountPitched || b.closure) {
+        const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Unknown Sales';
+        if (!salesMap[author]) salesMap[author] = {
+          name: author,
+          pitched: 0,
+          closed: 0,
+          revenue: 0
+        };
+        if (b.amountPitched) salesMap[author].pitched++;
+        if (b.closure === 'Yes') {
+          salesMap[author].closed++;
+          salesMap[author].revenue += Number(b.closureAmount || 0);
+        }
+      }
+    });
+    return {
+      total,
+      connected,
+      demoBooked,
+      demoDone,
+      interested,
+      notInterested,
+      pitched,
+      paymentSent,
+      closed,
+      closedRevenue,
+      amList: Object.values(amMap).sort((a, b) => b.demoBooked - a.demoBooked),
+      salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
+    };
+  }, [sellers, layerB]);
+  const funnelData = [{
+    label: 'All Sellers',
+    val: stats.total,
+    color: 'var(--accent)'
+  }, {
+    label: 'Connected',
+    val: stats.connected,
+    color: 'var(--blue)'
+  }, {
+    label: 'Demo Booked',
+    val: stats.demoBooked,
+    color: 'var(--amber)'
+  }, {
+    label: 'Demo Completed',
+    val: stats.demoDone,
+    color: 'var(--green)'
+  }, {
+    label: 'Closed Won',
+    val: stats.closed,
+    color: '#22c55e'
+  }];
+  const maxFunnel = stats.total || 1;
+  const rankStyle = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+  const amSortKey = {
+    leaderboard: 'demoBooked',
+    'bar chart': 'demoDone'
+  };
+  const sortedAM = [...stats.amList].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked']);
+  const maxAmVal = Math.max(1, ...sortedAM.map(a => a.demoBooked));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "content"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-accent"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Total Sellers"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value"
+  }, stats.total), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, "Loaded from Sheet")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-green"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Connected"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value"
+  }, stats.connected), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, stats.total ? Math.round(stats.connected / stats.total * 100) : 0, "% of total")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-amber"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Demo Booked"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value"
+  }, stats.demoBooked), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, "Scheduled calls")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-red"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Closed Won"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value"
+  }, stats.closed), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, "₹", fmtNum(stats.closedRevenue), " revenue"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+    sellers: sellers,
+    layerB: layerB
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 16,
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card",
+    style: {
+      borderRadius: 'var(--radius)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--blue)'
+    }
+  }), "AM Pipeline"), [['Connected', 'var(--green)', stats.connected], ['Demo Booked', 'var(--blue)', stats.demoBooked], ['Demo Done', 'var(--accent)', stats.demoDone], ['Interested', 'var(--amber)', stats.interested], ['Not Interested', 'var(--red)', stats.notInterested]].map(([l, c, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text2)'
+    }
+  }, l), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 80,
+      height: 6,
+      background: 'var(--surface2)',
+      borderRadius: 3,
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: `${stats.total ? v / stats.total * 100 : 0}%`,
+      height: '100%',
+      background: c,
+      borderRadius: 3
+    }
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: 'var(--text)',
+      fontFamily: 'JetBrains Mono',
+      width: 28,
+      textAlign: 'right'
+    }
+  }, v))))), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card",
+    style: {
+      borderRadius: 'var(--radius)'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--green)'
+    }
+  }), "Sales Pipeline"), [['Pitched', 'var(--accent)', stats.pitched], ['Payment Link Sent', 'var(--blue)', stats.paymentSent], ['Closed Won', 'var(--green)', stats.closed]].map(([l, c, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text2)'
+    }
+  }, l), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: 80,
+      height: 6,
+      background: 'var(--surface2)',
+      borderRadius: 3,
+      overflow: 'hidden'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: `${stats.total ? v / stats.total * 100 : 0}%`,
+      height: '100%',
+      background: c,
+      borderRadius: 3
+    }
+  })), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: 'var(--text)',
+      fontFamily: 'JetBrains Mono',
+      width: 28,
+      textAlign: 'right'
+    }
+  }, v)))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: '1px solid var(--border)',
+      marginTop: 14,
+      paddingTop: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)',
+      marginBottom: 4
+    }
+  }, "Conversion Rate"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 22,
+      fontWeight: 700,
+      color: 'var(--green)',
+      fontFamily: 'JetBrains Mono'
+    }
+  }, stats.demoBooked ? Math.round(stats.closed / stats.demoBooked * 100) : 0, "%"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "Demo Booked → Closed")))), /*#__PURE__*/React.createElement("div", {
+    className: "funnel-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--accent)'
+    }
+  }), "Retention Funnel"), funnelData.map((row, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "funnel-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "funnel-label"
+  }, row.label), /*#__PURE__*/React.createElement("div", {
+    className: "funnel-bar-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "funnel-bar",
+    style: {
+      width: `${Math.max(row.val / maxFunnel * 100, 2)}%`,
+      background: row.color
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "funnel-val"
+  }, row.val))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)',
+      width: 36,
+      textAlign: 'right'
+    }
+  }, maxFunnel ? Math.round(row.val / maxFunnel * 100) : 0, "%")))), /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-head"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--blue)'
+    }
+  }), "AM Performance"), /*#__PURE__*/React.createElement("div", {
+    className: "tab-pills"
+  }, ['leaderboard', 'bar chart', 'cards'].map(v => /*#__PURE__*/React.createElement("div", {
+    key: v,
+    className: `tab-pill${amView === v ? ' active' : ''}`,
+    onClick: () => setAmView(v)
+  }, v.charAt(0).toUpperCase() + v.slice(1))))), amView === 'leaderboard' && /*#__PURE__*/React.createElement("div", {
+    className: "leaderboard"
+  }, sortedAM.slice(0, 10).map((am, i) => /*#__PURE__*/React.createElement("div", {
+    key: am.name,
+    className: "lb-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `lb-rank ${rankStyle(i)}`
+  }, i + 1), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "lb-name"
+  }, am.name), /*#__PURE__*/React.createElement("div", {
+    className: "lb-team"
+  }, am.team)), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stats"
+  }, [['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Connected', am.connected, 'var(--accent)'], ['Drop-off', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    className: "lb-stat"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-val",
+    style: {
+      color: c
+    }
+  }, v), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-label"
+  }, l))))))), amView === 'bar chart' && /*#__PURE__*/React.createElement("div", {
+    className: "bar-chart-wrap"
+  }, sortedAM.slice(0, 10).map(am => /*#__PURE__*/React.createElement("div", {
+    key: am.name,
+    className: "bar-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bar-name"
+  }, am.name), /*#__PURE__*/React.createElement("div", {
+    className: "bar-outer"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bar-inner",
+    style: {
+      width: `${am.demoBooked / maxAmVal * 100}%`,
+      background: 'var(--accent)'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "bar-val"
+  }, am.demoBooked))), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)',
+      width: 24,
+      textAlign: 'right'
+    }
+  }, am.demoDone))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: 'var(--text3)',
+      marginTop: 6
+    }
+  }, "Bar = Demo Booked · Right = Demo Done")), amView === 'cards' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3,1fr)',
+      gap: 12,
+      padding: 18
+    }
+  }, sortedAM.map(am => /*#__PURE__*/React.createElement("div", {
+    key: am.name,
+    style: {
+      background: 'var(--surface2)',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-sm)',
+      padding: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 700,
+      fontSize: 12.5,
+      color: 'var(--text)',
+      marginBottom: 2
+    }
+  }, am.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: 'var(--text3)',
+      marginBottom: 10
+    }
+  }, am.team), [['Connected', am.connected, 'var(--accent)'], ['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Not Interested', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      marginBottom: 5
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, l), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 12,
+      fontWeight: 700,
+      color: c,
+      fontFamily: 'JetBrains Mono'
+    }
+  }, v))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      color: 'var(--text3)',
+      marginTop: 6,
+      borderTop: '1px solid var(--border)',
+      paddingTop: 6
+    }
+  }, "Conv: ", am.demoBooked ? Math.round(am.demoDone / am.demoBooked * 100) : 0, "%"))))), stats.salesList.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-head"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--green)'
+    }
+  }), "Sales Executive Performance")), /*#__PURE__*/React.createElement("div", {
+    className: "leaderboard"
+  }, stats.salesList.map((se, i) => /*#__PURE__*/React.createElement("div", {
+    key: se.name,
+    className: "lb-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `lb-rank ${rankStyle(i)}`
+  }, i + 1), /*#__PURE__*/React.createElement("div", {
+    className: "lb-name"
+  }, se.name), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stats"
+  }, [['Pitched', se.pitched, 'var(--accent)'], ['Closed', se.closed, 'var(--green)'], ['Revenue', '₹' + fmtNum(se.revenue), 'var(--amber)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    className: "lb-stat"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-val",
+    style: {
+      color: c
+    }
+  }, v), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-label"
+  }, l)))))))));
+}
+
+// ─── CALENDAR ────────────────────────────────────────────────────────────────
+function CalendarView({
+  sellers,
+  layerB,
+  role,
+  userName,
+  onOpenSeller
+}) {
+  const [view, setView] = useState('month');
+  const [cursor, setCursor] = useState(new Date());
+  const [teamMode, setTeamMode] = useState(false);
+  const [popup, setPopup] = useState(null); // { event, x, y }
+  const [panelSeller, setPanelSeller] = useState(null);
+  const popupRef = useRef();
+
+  // Close popup on outside click
+  useEffect(() => {
+    const h = e => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) setPopup(null);
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  // Build events from layerB — only demoBookedDate
+  const events = useMemo(() => {
+    const evs = [];
+    sellers.forEach(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      const isOwn = role === 'am' ? s['AM Name'] === userName : true;
+      if (!b.demoBookedDate) return;
+      if (!teamMode && !isOwn) return;
+      evs.push({
+        id: s['Advertiser ID'],
+        seller: s,
+        b,
+        date: b.demoBookedDate,
+        // YYYY-MM-DD
+        label: s['Store Name'],
+        am: s['AM Name'],
+        tier: s['UPDATED TIERING'],
+        disposition: b.disposition,
+        demoStatus: b.demoStatus,
+        isOwn,
+        color: isOwn ? 'cal-event-demo' : 'cal-event-team'
+      });
+    });
+    return evs;
+  }, [sellers, layerB, role, userName, teamMode]);
+
+  // Events indexed by date string
+  const byDate = useMemo(() => {
+    const m = {};
+    events.forEach(e => {
+      if (!m[e.date]) m[e.date] = [];
+      m[e.date].push(e);
+    });
+    return m;
+  }, [events]);
+  const todayStr = today();
+
+  // Navigation
+  const move = dir => {
+    setCursor(prev => {
+      const d = new Date(prev);
+      if (view === 'month') d.setMonth(d.getMonth() + dir);else if (view === 'week') d.setDate(d.getDate() + dir * 7);else d.setDate(d.getDate() + dir);
+      return d;
+    });
+  };
+  const goToday = () => setCursor(new Date());
+
+  // Title
+  const title = useMemo(() => {
+    if (view === 'month') return cursor.toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric'
+    });
+    if (view === 'week') {
+      const mon = weekStart(cursor);
+      const sun = new Date(mon);
+      sun.setDate(sun.getDate() + 6);
+      return `${mon.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short'
+      })} – ${sun.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      })}`;
+    }
+    return cursor.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  }, [cursor, view]);
+
+  // Open popup
+  const openPopup = (ev, e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setPopup({
+      ev,
+      x: Math.min(rect.right + 6, window.innerWidth - 296),
+      y: Math.min(rect.top, window.innerHeight - 260)
+    });
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "cal-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cal-toolbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-group"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-btn",
+    onClick: () => move(-1)
+  }, "‹"), /*#__PURE__*/React.createElement("div", {
+    className: "cal-nav-btn",
+    onClick: () => move(1)
+  }, "›"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: goToday
+  }, "Today")), /*#__PURE__*/React.createElement("div", {
+    className: "cal-title"
+  }, title), /*#__PURE__*/React.createElement("div", {
+    className: "cal-view-pills"
+  }, ['day', 'week', 'month'].map(v => /*#__PURE__*/React.createElement("div", {
+    key: v,
+    className: `cal-view-pill${view === v ? ' active' : ''}`,
+    onClick: () => setView(v)
+  }, v.charAt(0).toUpperCase() + v.slice(1)))), /*#__PURE__*/React.createElement("div", {
+    className: "cal-toggle"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "cal-toggle-label"
+  }, "Team view"), /*#__PURE__*/React.createElement("label", {
+    className: "cal-toggle-switch"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "checkbox",
+    checked: teamMode,
+    onChange: e => setTeamMode(e.target.checked)
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cal-toggle-track"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "cal-toggle-thumb"
+  }))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)',
+      display: 'flex',
+      gap: 12,
+      marginLeft: 4
+    }
+  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: 2,
+      background: 'var(--accent)',
+      marginRight: 4
+    }
+  }), "My demos"), teamMode && /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+    style: {
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: 2,
+      background: 'var(--purple)',
+      marginRight: 4
+    }
+  }), "Team demos"))), /*#__PURE__*/React.createElement("div", {
+    className: "cal-body"
+  }, view === 'month' && /*#__PURE__*/React.createElement(MonthView, {
+    cursor: cursor,
+    byDate: byDate,
+    todayStr: todayStr,
+    openPopup: openPopup,
+    setCursor: d => {
+      setCursor(d);
+      setView('day');
+    }
+  }), view === 'week' && /*#__PURE__*/React.createElement(WeekView, {
+    cursor: cursor,
+    byDate: byDate,
+    todayStr: todayStr,
+    openPopup: openPopup
+  }), view === 'day' && /*#__PURE__*/React.createElement(DayView, {
+    cursor: cursor,
+    byDate: byDate,
+    todayStr: todayStr,
+    openPopup: openPopup
+  })), popup && /*#__PURE__*/React.createElement("div", {
+    ref: popupRef,
+    className: "ev-popup",
+    style: {
+      top: popup.y,
+      left: popup.x
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "ev-popup-close",
+    onClick: () => setPopup(null)
+  }, "✕"), /*#__PURE__*/React.createElement("div", {
+    className: "ev-popup-store"
+  }, popup.ev.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 8
+    }
+  }, tierBadge(popup.ev.tier), ' ', dispositionBadge(popup.ev.disposition)), [['AM', popup.ev.am], ['Demo Date', fmtDate(popup.ev.date)], ['Demo Status', popup.ev.demoStatus || '—'], ['Program', popup.ev.seller['Program']]].map(([l, v]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    className: "ev-popup-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "ev-popup-label"
+  }, l), /*#__PURE__*/React.createElement("span", {
+    className: "ev-popup-val"
+  }, v))), /*#__PURE__*/React.createElement("div", {
+    className: "ev-popup-footer"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-primary",
+    style: {
+      width: '100%',
+      justifyContent: 'center'
+    },
+    onClick: () => {
+      setPanelSeller(popup.ev.seller);
+      setPopup(null);
+    }
+  }, "Open Full Profile →"))), panelSeller && /*#__PURE__*/React.createElement(SidePanel, {
+    seller: panelSeller,
+    role: role,
+    userName: userName,
+    layerB: layerB,
+    onUpdate: () => {},
+    onClose: () => setPanelSeller(null)
+  }));
+}
+function weekStart(d) {
+  const dt = new Date(d);
+  const day = dt.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // Monday-start
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+function dateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const HOURS = Array.from({
+  length: 24
+}, (_, i) => i);
+function EventPill({
+  ev,
+  openPopup,
+  cls
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: `cal-event ${cls || ev.color}`,
+    title: ev.label,
+    onClick: e => {
+      e.stopPropagation();
+      openPopup(ev, e);
+    }
+  }, ev.label);
+}
+function MonthView({
+  cursor,
+  byDate,
+  todayStr,
+  openPopup,
+  setCursor
+}) {
+  const year = cursor.getFullYear(),
+    month = cursor.getMonth();
+  const first = new Date(year, month, 1);
+  const startDay = first.getDay() === 0 ? 6 : first.getDay() - 1; // Monday start
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
+  const cells = Array.from({
+    length: totalCells
+  }, (_, i) => {
+    const d = new Date(year, month, 1 - startDay + i);
+    return {
+      date: d,
+      str: dateStr(d),
+      inMonth: d.getMonth() === month
+    };
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "month-grid"
+  }, DOWS.map(d => /*#__PURE__*/React.createElement("div", {
+    key: d,
+    className: "month-dow"
+  }, d)), cells.map(({
+    date,
+    str,
+    inMonth
+  }) => {
+    const evs = byDate[str] || [];
+    const isToday = str === todayStr;
+    return /*#__PURE__*/React.createElement("div", {
+      key: str,
+      className: `month-cell${!inMonth ? ' other-month' : ''}${isToday ? ' today' : ''}`,
+      onClick: () => inMonth && setCursor(date)
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "month-day-num"
+    }, date.getDate()), evs.slice(0, 3).map(ev => /*#__PURE__*/React.createElement(EventPill, {
+      key: ev.id,
+      ev: ev,
+      openPopup: openPopup
+    })), evs.length > 3 && /*#__PURE__*/React.createElement("div", {
+      className: "more-events"
+    }, "+", evs.length - 3, " more"));
+  }));
+}
+function WeekView({
+  cursor,
+  byDate,
+  todayStr,
+  openPopup
+}) {
+  const mon = weekStart(cursor);
+  const days = Array.from({
+    length: 7
+  }, (_, i) => {
+    const d = new Date(mon);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "week-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'var(--surface2)',
+      borderBottom: '1px solid var(--border)'
+    }
+  }), days.map(d => {
+    const str = dateStr(d);
+    const isToday = str === todayStr;
+    return /*#__PURE__*/React.createElement("div", {
+      key: str,
+      className: "week-header"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "week-dow"
+    }, DOWS[days.indexOf(d)]), /*#__PURE__*/React.createElement("div", {
+      className: `week-date${isToday ? ' today-num' : ''}`
+    }, d.getDate()));
+  }), HOURS.map(h => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: h
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "week-time-col"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "week-time-slot"
+  }, h === 0 ? '' : h < 10 ? `0${h}:00` : `${h}:00`)), days.map(d => {
+    const str = dateStr(d);
+    const evs = byDate[str] || [];
+    // Show events in first hour slot of the day (h===8) as all-day style
+    return /*#__PURE__*/React.createElement("div", {
+      key: str,
+      className: "week-day-slot",
+      style: {
+        position: 'relative'
+      }
+    }, h === 8 && evs.map(ev => /*#__PURE__*/React.createElement("div", {
+      key: ev.id,
+      className: `week-event cal-event ${ev.color}`,
+      style: {
+        top: 4,
+        height: evs.length > 1 ? 'calc(100% - 8px)' : 'calc(100% - 8px)'
+      },
+      onClick: e => {
+        e.stopPropagation();
+        openPopup(ev, e);
+      }
+    }, ev.label)));
+  }))));
+}
+function DayView({
+  cursor,
+  byDate,
+  todayStr,
+  openPopup
+}) {
+  const str = dateStr(cursor);
+  const evs = byDate[str] || [];
+  const isToday = str === todayStr;
+  return /*#__PURE__*/React.createElement("div", {
+    className: "day-grid"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "day-header"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "day-header-date",
+    style: {
+      color: isToday ? 'var(--accent)' : 'var(--text)'
+    }
+  }, cursor.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: 8,
+      fontSize: 12,
+      color: 'var(--text3)'
+    }
+  }, evs.length, " demo", evs.length !== 1 ? 's' : '', " scheduled")), evs.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      gridColumn: '1/-1',
+      padding: '10px 16px',
+      borderBottom: '1px solid var(--border)',
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap',
+      background: 'var(--surface2)'
+    }
+  }, evs.map(ev => /*#__PURE__*/React.createElement("div", {
+    key: ev.id,
+    className: `cal-event ${ev.color}`,
+    style: {
+      fontSize: 11.5,
+      padding: '4px 10px'
+    },
+    onClick: e => openPopup(ev, e)
+  }, "📅 ", ev.label, " — ", ev.am))), /*#__PURE__*/React.createElement("div", {
+    className: "week-time-col"
+  }, HOURS.map(h => /*#__PURE__*/React.createElement("div", {
+    key: h,
+    className: "week-time-slot",
+    style: {
+      height: 48
+    }
+  }, h === 0 ? '' : h < 10 ? `0${h}:00` : `${h}:00`))), /*#__PURE__*/React.createElement("div", {
+    className: "day-event-col"
+  }, HOURS.map(h => /*#__PURE__*/React.createElement("div", {
+    key: h,
+    className: "day-slot"
+  })), evs.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "empty-state",
+    style: {
+      paddingTop: 60
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-icon"
+  }, "📅"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-text"
+  }, "No demos scheduled"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-sub"
+  }, "Book a demo from the Sellers view"))));
+}
+
+// ─── UPLOAD ───────────────────────────────────────────────────────────────────
+function UploadView({
+  onUpload
+}) {
+  const [drag, setDrag] = useState(false);
+  const ref = useRef();
+  const process = file => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: r => onUpload(r.data)
+    });
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "content",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '60vh'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: '100%',
+      maxWidth: 500
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `upload-zone${drag ? ' drag' : ''}`,
+    onDragOver: e => {
+      e.preventDefault();
+      setDrag(true);
+    },
+    onDragLeave: () => setDrag(false),
+    onDrop: e => {
+      e.preventDefault();
+      setDrag(false);
+      process(e.dataTransfer.files[0]);
+    },
+    onClick: () => ref.current.click()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "upload-icon"
+  }, "📂"), /*#__PURE__*/React.createElement("div", {
+    className: "upload-text"
+  }, "Drop your CSV here or click to browse"), /*#__PURE__*/React.createElement("div", {
+    className: "upload-sub"
+  }, "sales_cs_analytics CSV format · Layer A data only"), /*#__PURE__*/React.createElement("input", {
+    ref: ref,
+    type: "file",
+    accept: ".csv",
+    style: {
+      display: 'none'
+    },
+    onChange: e => process(e.target.files[0])
+  }))));
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function ConfigView() {
+  const existing = getCredentials() || {};
+  const [form, setForm] = useState({ sheetId: existing.sheetId||'', apiKey: existing.apiKey||'', proxyUrl: existing.proxyUrl||'' });
+  const [status, setStatus] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const saveCreds = () => {
+    if (!form.sheetId.trim() || !form.apiKey.trim() || !form.proxyUrl.trim()) {
+      setStatus({ ok: false, msg: 'All three fields are required.' }); return;
+    }
+    saveCredentials({ sheetId: form.sheetId.trim(), apiKey: form.apiKey.trim(), proxyUrl: form.proxyUrl.trim() });
+    setSaved(true); setStatus(null);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const testConnection = async () => {
+    setTesting(true); setStatus(null);
+    try {
+      const c = getCredentials();
+      if (!c?.sheetId || !c?.apiKey) throw new Error('Save credentials first');
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${c.sheetId}/values/${TAB}!A1:A1?key=${c.apiKey}`;
+      const r = await fetch(url);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error.message);
+      setStatus({ ok: true, msg: 'Connection successful — Sheet is reachable.' });
+    } catch(e) {
+      setStatus({ ok: false, msg: e.message });
+    } finally { setTesting(false); }
+  };
+
+  const inputStyle = (mono) => ({ fontFamily: mono ? 'JetBrains Mono,monospace' : 'Inter,sans-serif', fontSize: 12 });
+
+  return React.createElement('div', { className:'content' },
+    React.createElement('div', { className:'config-wrap' },
+      React.createElement('div', { className:'config-card' },
+        React.createElement('div', { className:'config-card-title' }, 'Google Sheets Connection'),
+        React.createElement('div', { className:'config-card-sub' }, 'Stored in your browser only — never in source code, safe to push to GitHub.'),
+        [
+          ['sheetId',  'Sheet ID',        'Paste your Sheet ID here',                   false],
+          ['apiKey',   'API Key',         'Paste your Google API key here',             true],
+          ['proxyUrl', 'Apps Script URL', 'Paste your Apps Script deployment URL here', true],
+        ].map(([k, label, ph, mono]) =>
+          React.createElement('div', { key: k, style:{marginBottom:14} },
+            React.createElement('label', { style:{fontSize:11,fontWeight:600,color:'var(--text3)',display:'block',marginBottom:5} }, label),
+            React.createElement('input', {
+              className: 'form-control',
+              type: k === 'apiKey' ? 'password' : 'text',
+              placeholder: ph,
+              value: form[k],
+              onChange: e => setForm(f => ({...f, [k]: e.target.value})),
+              style: inputStyle(mono)
+            })
+          )
+        ),
+        React.createElement('div', { style:{display:'flex',gap:8,marginTop:4,alignItems:'center',flexWrap:'wrap'} },
+          React.createElement('button', { className:'btn btn-primary btn-sm', onClick:saveCreds }, saved ? '✓ Saved' : 'Save credentials'),
+          React.createElement('button', { className:'btn btn-ghost btn-sm', onClick:testConnection, disabled:testing }, testing ? '⟳ Testing…' : 'Test connection'),
+          status && React.createElement('span', { style:{fontSize:12,fontWeight:600,color:status.ok?'var(--green)':'var(--red)'} },
+            status.ok ? '✓ ' : '✕ ', status.msg
+          )
+        ),
+        React.createElement('div', { style:{marginTop:14,padding:'10px 12px',background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:6,fontSize:11.5,color:'#166534',lineHeight:1.6} },
+          '✓ Credentials saved to your browser localStorage only. Zero secrets in the source file — safe on GitHub.'
+        )
+      )
+    )
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function App() {
+  const [session, setSession] = useState(null);
+  const [sellers, setSellers] = useState([]);
+  const [layerB, setLayerB] = useState({});
+  const [page, setPage] = useState('dashboard');
+  const [syncMsg, setSyncMsg] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const amNames = useMemo(() => [...new Set(sellers.map(s => s['AM Name']).filter(Boolean).sort())], [sellers]);
+  const showMsg = (text, type = 'green', dur = 3000) => {
+    setSyncMsg({
+      text,
+      type
+    });
+    if (dur) setTimeout(() => setSyncMsg(null), dur);
+  };
+
+  // ── Load sellers from Sheet1 + merge Layer B from TrackerLayerB ──────────
+  const loadFromSheet = useCallback(async () => {
+    setLoading(true);
+    showMsg('Loading sellers from Sheet…', 'warn', 0);
+    try {
+      // 1. Read Layer A (seller master data)
+      const sellerData = await sheetReadSellers();
+      if (!sellerData.length) {
+        showMsg('No sellers found in Sheet1 — make sure data exists', 'error');
+        setLoading(false);
+        return;
+      }
+      setSellers(sellerData);
+
+      // 2. Read Layer B (activity data) and merge
+      let layerBData = {};
+      try {
+        layerBData = await sheetReadAll();
+      } catch (e) {/* TrackerLayerB may not exist yet — ok */}
+      setLayerB(prev => {
+        const merged = {};
+        sellerData.forEach(s => {
+          const id = s['Advertiser ID'];
+          merged[id] = layerBData[id] || prev[id] || initLayerB();
+        });
+        return merged;
+      });
+      showMsg(`✓ ${sellerData.length} sellers loaded from Sheet`);
+      setPage('sellers');
+    } catch (e) {
+      showMsg(`Failed to load: ${e.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Pull Layer B only (sync activity data) ───────────────────────────────
+  const syncFromSheet = useCallback(async (silent = false) => {
+    setSyncing(true);
+    if (!silent) showMsg('Syncing activity data…', 'warn', 0);
+    try {
+      const remote = await sheetReadAll();
+      setLayerB(prev => {
+        const merged = {
+          ...prev
+        };
+        Object.entries(remote).forEach(([id, b]) => {
+          merged[id] = b;
+        });
+        return merged;
+      });
+      if (!silent) showMsg(`✓ Synced — ${Object.keys(remote).length} records`);
+    } catch (e) {
+      if (!silent) showMsg(`Sync failed: ${e.message}`, 'error');
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
+
+  // ── Write single seller's Layer B to Sheet ───────────────────────────────
+  const updateLayerB = useCallback(async (id, patch) => {
+    setLayerB(prev => {
+      const cur = prev[id] || initLayerB();
+      return {
+        ...prev,
+        [id]: {
+          ...cur,
+          ...patch
+        }
+      };
+    });
+    try {
+      await sheetWriteRow(id, {
+        ...(layerB[id] || initLayerB()),
+        ...patch
+      });
+    } catch (e) {
+      showMsg(`Write failed: ${e.message}`, 'error');
+    }
+  }, [layerB]);
+
+  // ── CSV upload: still available as admin tool to refresh Layer A ─────────
+  const handleUpload = useCallback(async data => {
+    setSellers(data);
+    setLayerB(prev => {
+      const next = {
+        ...prev
+      };
+      data.forEach(s => {
+        if (!next[s['Advertiser ID']]) next[s['Advertiser ID']] = initLayerB();
+      });
+      return next;
+    });
+    showMsg(`✓ ${data.length} sellers loaded from CSV — syncing Sheet…`, 'warn', 0);
+    setPage('sellers');
+    try {
+      await syncFromSheet(true);
+      showMsg(`✓ ${data.length} sellers loaded`);
+    } catch (e) {
+      showMsg(`✓ ${data.length} sellers loaded (Sheet sync failed: ${e.message})`, 'warn');
+    }
+  }, [syncFromSheet]);
+
+  // ── Auto-load on login ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (session) loadFromSheet();
+  }, [session]);
+  const nav = [{
+    id: 'dashboard',
+    icon: '📊',
+    label: 'Dashboard'
+  }, {
+    id: 'sellers',
+    icon: '🏪',
+    label: 'Sellers'
+  }, ...(session?.role !== 'admin' ? [{
+    id: 'calendar',
+    icon: '📅',
+    label: 'Calendar'
+  }] : []), ...(session?.role === 'admin' ? [{
+    id: 'upload',
+    icon: '📂',
+    label: 'Upload CSV'
+  }, {
+    id: 'config',
+    icon: '⚙️',
+    label: 'Config'
+  }] : [])];
+  const roleClass = {
+    am: 'role-am',
+    sales: 'role-sales',
+    admin: 'role-admin'
+  };
+  const roleLabel = {
+    am: 'AM',
+    sales: 'Sales',
+    admin: 'Admin'
+  };
+  if (!session) return /*#__PURE__*/React.createElement(Login, {
+    onLogin: (role, name) => setSession({
+      role,
+      name
+    })
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    className: "app"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sidebar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sidebar-logo"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "brand"
+  }, "SellerGeni"), /*#__PURE__*/React.createElement("div", {
+    className: "product"
+  }, "Retention Tracker"), /*#__PURE__*/React.createElement("span", {
+    className: `role-badge ${roleClass[session.role]}`
+  }, roleLabel[session.role])), /*#__PURE__*/React.createElement("div", {
+    className: "sidebar-nav"
+  }, nav.map(n => /*#__PURE__*/React.createElement("div", {
+    key: n.id,
+    className: `nav-item${page === n.id ? ' active' : ''}`,
+    onClick: () => setPage(n.id)
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "nav-icon"
+  }, n.icon), n.label))), /*#__PURE__*/React.createElement("div", {
+    className: "sidebar-footer"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "user-info"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "user-avatar"
+  }, session.name[0]?.toUpperCase()), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "user-name"
+  }, session.name), /*#__PURE__*/React.createElement("div", {
+    className: "user-role"
+  }, roleLabel[session.role])), /*#__PURE__*/React.createElement("button", {
+    className: "logout-btn",
+    onClick: () => setSession(null),
+    title: "Sign out"
+  }, "⏏")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      gap: 6,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      flex: 1,
+      justifyContent: 'center',
+      fontSize: 11
+    },
+    onClick: loadFromSheet,
+    disabled: loading
+  }, loading ? '⟳ Loading…' : '↻ Reload'), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    style: {
+      flex: 1,
+      justifyContent: 'center',
+      fontSize: 11
+    },
+    onClick: () => syncFromSheet(),
+    disabled: syncing
+  }, syncing ? '⟳ Syncing…' : '⇅ Sync')))), /*#__PURE__*/React.createElement("div", {
+    className: "main"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "topbar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "page-title"
+  }, nav.find(n => n.id === page)?.label || (page === 'calendar' ? 'Calendar' : 'Tracker')), /*#__PURE__*/React.createElement("div", {
+    className: "topbar-spacer"
+  }), sellers.length > 0 && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, sellers.length, " sellers"), (loading || syncing) && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--amber)'
+    }
+  }, loading ? '⟳ loading…' : '⟳ syncing…'), session.role === 'admin' && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => setPage('upload')
+  }, "📂 Upload CSV")), syncMsg && /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '8px 20px 0'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `sync-bar${syncMsg.type === 'error' ? ' error' : syncMsg.type === 'warn' ? ' warn' : ''}`
+  }, syncMsg.text)), loading && /*#__PURE__*/React.createElement("div", {
+    className: "content",
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '60vh'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      textAlign: 'center'
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 28,
+      marginBottom: 12
+    }
+  }, "⟳"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: 'var(--text)'
+    }
+  }, "Loading sellers from Sheet…"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: 'var(--text3)',
+      marginTop: 4
+    }
+  }, "Reading Sheet1 and TrackerLayerB"))), !loading && sellers.length === 0 && page !== 'upload' && page !== 'config' && /*#__PURE__*/React.createElement("div", {
+    className: "content"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-state"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-icon"
+  }, "📊"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-text"
+  }, "No sellers loaded"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-sub",
+    style: {
+      marginBottom: 16
+    }
+  }, "Make sure your Google Sheet has data in Sheet1"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-primary",
+    onClick: loadFromSheet
+  }, "↻ Load from Sheet"))), !loading && sellers.length > 0 && page === 'dashboard' && /*#__PURE__*/React.createElement(Dashboard, {
+    sellers: sellers,
+    layerB: layerB
+  }), !loading && sellers.length > 0 && page === 'sellers' && /*#__PURE__*/React.createElement(SellerList, {
+    sellers: sellers,
+    layerB: layerB,
+    role: session.role,
+    userName: session.name,
+    onUpdate: updateLayerB
+  }), !loading && sellers.length > 0 && page === 'calendar' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column'
+    }
+  }, /*#__PURE__*/React.createElement(CalendarView, {
+    sellers: sellers,
+    layerB: layerB,
+    role: session.role,
+    userName: session.name
+  })), page === 'upload' && /*#__PURE__*/React.createElement(UploadView, {
+    onUpload: handleUpload
+  }), page === 'config' && /*#__PURE__*/React.createElement(ConfigView, null)));
+}
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e, info) { console.error('Tracker error:', e, info); }
+  render() {
+    if (this.state.error) {
+      return React.createElement('div', {
+        style: {minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16,background:'#fafafa',fontFamily:'Inter,sans-serif'}
+      },
+        React.createElement('div', {style:{fontSize:32}}, '⚠️'),
+        React.createElement('div', {style:{fontSize:16,fontWeight:600,color:'#111'}}, 'Something went wrong'),
+        React.createElement('div', {style:{fontSize:13,color:'#999',maxWidth:400,textAlign:'center'}}, this.state.error.message),
+        React.createElement('button', {
+          onClick: () => this.setState({error:null}),
+          style:{padding:'8px 20px',background:'#111',color:'#fff',border:'none',borderRadius:6,cursor:'pointer',fontSize:13,fontFamily:'Inter,sans-serif'}
+        }, 'Try again')
+      );
+    }
+    return this.props.children;
+  }
+}
+ReactDOM.createRoot(document.getElementById('root')).render(/*#__PURE__*/React.createElement(App, null));
+
+</script>
+</body>
+</html>
