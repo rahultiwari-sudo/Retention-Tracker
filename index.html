@@ -89,23 +89,10 @@
   .topbar { height: 48px; background: #fff; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
   .page-title { font-size: 13px; font-weight: 600; color: var(--text); }
   .topbar-spacer { flex: 1; }
-  .search-wrap { position: relative; }
-  .search-wrap input { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px 6px 30px; color: var(--text); font-size: 12px; font-family: 'Inter', sans-serif; outline: none; width: 200px; }
-  .search-wrap input:focus { border-color: var(--accent); background: #fff; }
-  .search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 11px; }
-  .filter-bar { display: flex; align-items: center; gap: 8px; padding: 0 20px; height: 42px; border-bottom: 1px solid var(--border); background: #fff; flex-shrink: 0; overflow-x: auto; }
-  .filter-select { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 10px; color: var(--text2); font-size: 11.5px; font-family: 'Inter', sans-serif; outline: none; cursor: pointer; }
-  .filter-select:focus { border-color: var(--accent); color: var(--text); }
-  .filter-chip { padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: #fff; color: var(--text3); white-space: nowrap; transition: all 0.1s; }
-  .filter-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .filter-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
 
   /* TABLE */
   .content { flex: 1; overflow-y: auto; padding: 16px 20px; background: #fafafa; }
   .table-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .table-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-  .table-count { font-size: 12px; color: var(--text3); }
-  .table-count strong { color: var(--text); }
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.1s; font-family: 'Inter', sans-serif; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { opacity: 0.85; }
@@ -121,6 +108,8 @@
   td { padding: 9px 12px; font-size: 12.5px; color: var(--text2); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
   td.name-cell { color: var(--text); font-weight: 500; }
   td.name-cell:hover { color: var(--blue); }
+  .table-wrap.auto-fit table { table-layout: auto; }
+  .table-wrap.auto-fit td { white-space: normal; max-width: none; overflow: visible; text-overflow: clip; word-break: break-word; }
 
   /* BADGES — outlined style for chalk */
   .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap; border: 1px solid; }
@@ -163,7 +152,6 @@
   .form-control:focus { border-color: var(--accent); }
   .form-control:disabled { opacity: 0.5; cursor: not-allowed; background: var(--surface2); }
   select.form-control { cursor: pointer; }
-  .readonly-field { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; color: var(--text2); font-size: 12.5px; min-height: 33px; }
   .auto-badge { font-size: 10px; color: var(--text3); font-weight: 500; }
 
   /* METRICS GRID */
@@ -171,7 +159,6 @@
   .metric-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; }
   .metric-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 4px; }
   .metric-value { font-size: 16px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; }
-  .metric-sub { font-size: 10.5px; color: var(--text3); margin-top: 2px; }
 
   /* TIMELINE */
   .timeline { display: flex; flex-direction: column; gap: 0; }
@@ -191,6 +178,8 @@
 
   /* DASHBOARD */
   .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .pipeline-grid { grid-template-columns: 1fr 1fr; }
+  .am-cards-grid { grid-template-columns: repeat(3, 1fr); }
   .dash-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
   .dash-card-label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text3); margin-bottom: 8px; }
   .dash-card-value { font-size: 26px; font-weight: 600; color: var(--text); font-family: 'JetBrains Mono', monospace; line-height: 1; }
@@ -228,6 +217,7 @@
   .bar-chart-wrap { padding: 14px 16px; }
   .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   .bar-name { font-size: 11.5px; color: var(--text2); width: 100px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+  .am-perf-wrap.auto-fit .bar-name { width: auto; max-width: 220px; overflow: visible; text-overflow: clip; white-space: normal; word-break: break-word; }
   .bar-outer { flex: 1; background: var(--surface2); border-radius: 3px; height: 18px; overflow: hidden; }
   .bar-inner { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; min-width: 20px; }
   .bar-val { font-size: 11px; font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
@@ -334,6 +324,36 @@
   .ev-popup-close { position:absolute; top:10px; right:10px; background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; }
   .ev-popup-close:hover { color:var(--text); }
   .ev-popup-footer { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+
+  /* RESPONSIVE */
+  @media (max-width: 860px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; flex-direction: row; align-items: stretch; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
+    .sidebar-logo { border-bottom: none; border-right: 1px solid var(--border); flex-shrink: 0; }
+    .sidebar-nav { flex: 1 1 auto; display: flex; overflow-x: auto; padding: 6px; }
+    .nav-item { flex-direction: row; white-space: nowrap; margin-bottom: 0; margin-right: 2px; }
+    .nav-item.active { border-left: none; border-bottom: 2px solid var(--accent); padding-left: 10px; }
+    .nav-section { display: none; }
+    .sidebar-footer { width: 100%; border-top: 1px solid var(--border); }
+    .content { padding: 12px; }
+    .dash-grid { grid-template-columns: repeat(2, 1fr); }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .pipeline-grid { grid-template-columns: 1fr; }
+    .am-cards-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .panel { width: 100%; }
+    .login-card { width: 92vw; padding: 32px 22px; }
+    .month-grid { min-width: 620px; }
+    .week-grid { min-width: 620px; }
+    .day-grid { min-width: 480px; }
+    .cal-toolbar { height: auto; flex-wrap: wrap; }
+    .cal-title { min-width: auto; }
+  }
+  @media (max-width: 480px) {
+    .dash-grid, .am-cards-grid { grid-template-columns: 1fr 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+    .role-grid { gap: 6px; }
+  }
 </style>
 </head>
 <body>
@@ -351,7 +371,7 @@ const {
 const PROGRAMS = ['All', 'accelerate', 'elevatePlus'];
 const TIERS = ['All', 'P0', 'P1', 'P2', 'P3'];
 const DISPOSITION_OPTS = ['—', 'Not Responding', 'Call Later', 'Interested', 'Not Interested', 'Demo Booked'];
-const DEMO_STATUS_OPTS = ['—', 'Not Responding before Demo', 'Not Responding after Demo', 'Call Later', 'Requires Follow Up', 'Completed', 'Not Interested'];
+const DEMO_STATUS_OPTS = ['—', 'Not Responding before Demo', 'Not Responding after Demo', 'Call Later', 'No Show', 'Requires Follow Up', 'Completed', 'Not Interested'];
 const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
 const DURATION_OPTS = ['—', '1 Month', '2 Months', '3 Months', '6 Months', '12 Months'];
 const CLOSURE_OPTS = ['—', 'Yes', 'No'];
@@ -396,6 +416,7 @@ function demoStatusBadge(d) {
     'Requires Follow Up': 'badge-amber',
     'Not Responding before Demo': 'badge-red',
     'Not Responding after Demo': 'badge-red',
+    'No Show': 'badge-red',
     'Call Later': 'badge-amber'
   };
   return /*#__PURE__*/React.createElement("span", {
@@ -496,16 +517,6 @@ function rowToLb(row) {
   });
   return b;
 }
-async function sheetEnsureTab() {
-  // Check if tab exists; if not, create it with header row
-  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}?key=${API_KEY()}`;
-  const meta = await fetch(metaUrl).then(r => r.json());
-  const exists = meta.sheets?.some(s => s.properties?.title === TAB);
-  if (!exists) {
-    // Create tab via batchUpdate — requires OAuth; skip silently if fails
-    console.warn('Tab not found, will be created on first write via append');
-  }
-}
 async function sheetReadAll() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}/values/${TAB}?key=${API_KEY()}`;
   const r = await fetch(url);
@@ -604,9 +615,6 @@ async function sheetWriteRow(id, b, existingRowIndex) {
     }
     throw e;
   }
-}
-async function sheetEnsureHeader() {
-  // Header is now written by the Apps Script proxy on first write — no-op here
 }
 // No real access control is possible from a static, client-side file — this passcode
 // is only a soft deterrent against accidental clicks into Config/CSV upload, not security.
@@ -1036,14 +1044,6 @@ function ActivityTab({
     disabled: !amEditable,
     value: b.demoTakenDate || '',
     onCommit: update
-  })), /*#__PURE__*/React.createElement(FG, {
-    label: "Last Follow Up Date"
-  }, /*#__PURE__*/React.createElement(DebouncedInp, {
-    field: "lastFollowUpDate",
-    type: "date",
-    disabled: !amEditable,
-    value: b.lastFollowUpDate || '',
-    onCommit: update
   })))), /*#__PURE__*/React.createElement("div", {
     className: "form-section"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1239,7 +1239,8 @@ function SortableTh({
       cursor: 'pointer',
       whiteSpace: 'nowrap'
     },
-    onClick: () => onSort(col)
+    onClick: () => onSort(col),
+    ...kbd(() => onSort(col))
   }, /*#__PURE__*/React.createElement("span", null, children), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 9,
@@ -1308,6 +1309,8 @@ function SellerList({
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [adminView, setAdminView] = useState('all');
+  const [autoFit, setAutoFit] = useState(false);
 
   // Per-column search/filter state
   const [colSearch, setColSearch] = useState({
@@ -1336,7 +1339,7 @@ function SellerList({
   // Source: AM sees only their own sellers
   const source = useMemo(() => {
     if (role === 'am') return sellers.filter(s => s['AM Name'] === userName);
-    if (role === 'sales') return sellers.filter(s => {
+    if (role === 'sales' || (role === 'admin' && adminView === 'sales')) return sellers.filter(s => {
       const b = layerB[s['Advertiser ID']] || {};
       const active = b.disposition === 'Demo Booked' || b.disposition === 'Interested';
       // Once Sales has engaged with a seller, keep it visible even if the AM later
@@ -1345,7 +1348,7 @@ function SellerList({
       return active || touched;
     });
     return sellers;
-  }, [sellers, role, userName, layerB]);
+  }, [sellers, role, userName, layerB, adminView]);
   const teams = useMemo(() => ['All', ...new Set(source.map(s => s['Team Name']).filter(Boolean).sort())], [source]);
   const amNames = useMemo(() => ['All', ...new Set(source.map(s => s['AM Name']).filter(Boolean).sort())], [source]);
   const getCellVal = useCallback((s, key) => {
@@ -1360,7 +1363,6 @@ function SellerList({
       'Connected?': b.connectedRetention || '—',
       'Disposition': b.disposition || '—',
       'Demo Status': b.demoStatus || '—',
-      'Last Follow Up': b.lastFollowUpDate || '',
       'Intent': b.intent || '—',
       'Amount Pitched': Number(b.amountPitched) || 0,
       'Payment Link': b.paymentLinkSent || '—',
@@ -1498,11 +1500,6 @@ function SellerList({
       opts: ['All', ...DEMO_STATUS_OPTS.slice(1)]
     })
   }, "Demo Status"), /*#__PURE__*/React.createElement(SortableTh, {
-    col: "Last Follow Up",
-    sortKey: sortKey,
-    sortDir: sortDir,
-    onSort: onSort
-  }, "Last Follow Up"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Intent",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1529,12 +1526,7 @@ function SellerList({
       }
     }, s['WOS'], "w"), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: `badge ${b.connectedRetention === 'Yes' ? 'badge-green' : b.connectedRetention === 'No' ? 'badge-red' : 'badge-gray'}`
-    }, b.connectedRetention || '—')), /*#__PURE__*/React.createElement("td", null, dispositionBadge(b.disposition)), /*#__PURE__*/React.createElement("td", null, demoStatusBadge(b.demoStatus)), /*#__PURE__*/React.createElement("td", {
-      style: {
-        fontSize: 11,
-        color: 'var(--text3)'
-      }
-    }, fmtDate(b.lastFollowUpDate)), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)));
+    }, b.connectedRetention || '—')), /*#__PURE__*/React.createElement("td", null, dispositionBadge(b.disposition)), /*#__PURE__*/React.createElement("td", null, demoStatusBadge(b.demoStatus)), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)));
   })));
   const renderSalesTable = () => /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SortableTh, {
     col: "Store Name",
@@ -1839,7 +1831,36 @@ function SellerList({
       fontWeight: 600,
       color: '#333'
     }
-  }, userName, " — ", source.length, " sellers"), /*#__PURE__*/React.createElement("span", {
+  }, userName, " — ", source.length, " sellers"), role === 'admin' && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      border: '1px solid #e5e5e5',
+      borderRadius: 'var(--radius-sm)',
+      overflow: 'hidden'
+    }
+  }, [{
+    v: 'all',
+    label: 'All Sellers'
+  }, {
+    v: 'sales',
+    label: 'Sales View'
+  }].map(o => /*#__PURE__*/React.createElement("button", {
+    key: o.v,
+    onClick: () => {
+      setAdminView(o.v);
+      setPage(1);
+    },
+    style: {
+      padding: '5px 12px',
+      fontSize: 12,
+      fontWeight: 600,
+      cursor: 'pointer',
+      border: 'none',
+      background: adminView === o.v ? '#111' : '#fff',
+      color: adminView === o.v ? '#fff' : '#555',
+      fontFamily: 'Inter'
+    }
+  }, o.label))), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       color: 'var(--text3)'
@@ -1891,7 +1912,7 @@ function SellerList({
     key: n,
     value: n
   }, n, " entries"))))), /*#__PURE__*/React.createElement("div", {
-    className: "table-wrap"
+    className: `table-wrap${autoFit ? ' auto-fit' : ''}`
   }, filtered.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "empty-state"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1910,7 +1931,7 @@ function SellerList({
     style: {
       overflowX: 'auto'
     }
-  }, role === 'am' && renderAMTable(), role === 'sales' && renderSalesTable(), role === 'admin' && renderAdminTable())), filtered.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, role === 'am' && renderAMTable(), role === 'sales' && renderSalesTable(), role === 'admin' && (adminView === 'sales' ? renderSalesTable() : renderAdminTable()))), filtered.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -1925,6 +1946,20 @@ function SellerList({
   }, "Page ", page, " of ", totalPages), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
+      alignItems: 'center',
+      gap: 12
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => setAutoFit(f => !f),
+    title: "Toggle auto-fit column widths to content",
+    style: {
+      fontWeight: autoFit ? 700 : 400,
+      color: autoFit ? 'var(--accent)' : undefined
+    }
+  }, "⤢ Auto-resize Columns"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
       gap: 4
     }
   }, pgBtn('‹‹', () => setPage(1), page === 1), pgBtn('‹', () => setPage(p => Math.max(1, p - 1)), page === 1), pageNums().map((n, i) => n === '…' ? /*#__PURE__*/React.createElement("span", {
@@ -1935,7 +1970,7 @@ function SellerList({
       fontSize: 12,
       lineHeight: '28px'
     }
-  }, "…") : pgBtn(n, () => setPage(n), false, n === page)), pgBtn('›', () => setPage(p => Math.min(totalPages, p + 1)), page === totalPages), pgBtn('››', () => setPage(totalPages), page === totalPages))), selected && /*#__PURE__*/React.createElement(SidePanel, {
+  }, "…") : pgBtn(n, () => setPage(n), false, n === page)), pgBtn('›', () => setPage(p => Math.min(totalPages, p + 1)), page === totalPages), pgBtn('››', () => setPage(totalPages), page === totalPages)))), selected && /*#__PURE__*/React.createElement(SidePanel, {
     seller: selected,
     role: role,
     userName: userName,
@@ -1957,7 +1992,7 @@ const TRACKER_METRICS = [{
   label: 'Demo Completed',
   color: '#16a34a',
   field: 'demoStatus',
-  match: v => v === 'Completed'
+  match: (v, b) => v === 'Completed' || !!b.demoTakenDate
 }, {
   key: 'closure',
   label: 'Closure Won',
@@ -1970,12 +2005,6 @@ const TRACKER_METRICS = [{
   color: '#d97706',
   field: 'paymentLinkSent',
   match: v => v === 'Yes'
-}, {
-  key: 'connected',
-  label: 'Connected',
-  color: '#7c3aed',
-  field: 'connectedRetention',
-  match: v => v === 'Yes'
 }];
 function ActivityTracker({
   sellers,
@@ -1985,25 +2014,24 @@ function ActivityTracker({
   const [cursor, setCursor] = useState(new Date());
   const [filterAM, setFilterAM] = useState('All');
   const [vizMode, setVizMode] = useState('heatmap'); // heatmap | bar | table
-  const [metricKey, setMetricKey] = useState('demoBooked');
+  const [metricKey, setMetricKey] = useState('demoDone');
   const amNames = useMemo(() => ['All', ...new Set(sellers.map(s => s['AM Name']).filter(Boolean).sort())], [sellers]);
 
-  // Build activity index: date → am → { demoBooked, demoDone, closure, paymentLink, connected }
+  // Build activity index: date → am → { demoBooked, demoDone, closure, paymentLink }
   const activityIndex = useMemo(() => {
     const idx = {}; // date string → am → counts
     sellers.forEach(s => {
       const b = layerB[s['Advertiser ID']] || {};
       const am = s['AM Name'] || 'Unknown';
       TRACKER_METRICS.forEach(m => {
-        const dateField = m.key === 'demoBooked' ? b.demoBookedDate : m.key === 'demoDone' ? b.demoTakenDate : m.key === 'closure' ? b.closureDate : m.key === 'paymentLink' ? b.paymentLinkSentDate : m.key === 'connected' ? b.lastFollowUpDate : '';
-        if (!dateField || !m.match(b[m.field])) return;
+        const dateField = m.key === 'demoBooked' ? b.demoBookedDate : m.key === 'demoDone' ? b.demoTakenDate : m.key === 'closure' ? b.closureDate : m.key === 'paymentLink' ? b.paymentLinkSentDate : '';
+        if (!dateField || !m.match(b[m.field], b)) return;
         if (!idx[dateField]) idx[dateField] = {};
         if (!idx[dateField][am]) idx[dateField][am] = {
           demoBooked: 0,
           demoDone: 0,
           closure: 0,
-          paymentLink: 0,
-          connected: 0
+          paymentLink: 0
         };
         idx[dateField][am][m.key]++;
       });
@@ -2566,7 +2594,42 @@ function Dashboard({
   layerB
 }) {
   const [amView, setAmView] = useState('leaderboard');
+  const [autoFit, setAutoFit] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [amRepFrom, setAmRepFrom] = useState(today());
+  const [amRepTo, setAmRepTo] = useState(today());
+  // Per-AM report for a specific day/period — only Demo Booked, Demo Done and Closed Won
+  // have a real event date in the data model, so those are the only counts here.
+  const amDateReport = useMemo(() => {
+    const inRange = d => !!d && d >= amRepFrom && d <= amRepTo;
+    const map = {};
+    sellers.forEach(s => {
+      const am = s['AM Name'] || 'Unknown';
+      const b = layerB[s['Advertiser ID']] || {};
+      if (!map[am]) map[am] = {
+        name: am,
+        team: s['Team Name'],
+        demoBooked: 0,
+        demoDone: 0,
+        closed: 0,
+        revenue: 0
+      };
+      if (inRange(b.demoBookedDate)) map[am].demoBooked++;
+      if ((b.demoStatus === 'Completed' || b.demoTakenDate) && inRange(b.demoTakenDate)) map[am].demoDone++;
+      if (b.closure === 'Yes' && inRange(b.closureDate)) {
+        map[am].closed++;
+        map[am].revenue += Number(b.closureAmount) || 0;
+      }
+    });
+    return Object.values(map).sort((a, b) => b.demoBooked - a.demoBooked);
+  }, [sellers, layerB, amRepFrom, amRepTo]);
   const stats = useMemo(() => {
+    const hasDateFilter = !!(dateFrom || dateTo);
+    // Demo Done / Payment Link Sent / Closed Won are the only pipeline metrics with a
+    // real event date attached — Connected, Demo Booked, Interested, Not Interested and
+    // Pitched have no date field in the data model, so they stay all-time regardless.
+    const passDate = d => !hasDateFilter || (d && (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo));
     let total = sellers.length,
       connected = 0,
       demoBooked = 0,
@@ -2600,7 +2663,7 @@ function Dashboard({
         demoBooked++;
         amMap[am].demoBooked++;
       }
-      if (b.demoStatus === 'Completed') {
+      if ((b.demoStatus === 'Completed' || b.demoTakenDate) && passDate(b.demoTakenDate)) {
         demoDone++;
         amMap[am].demoDone++;
       }
@@ -2613,13 +2676,13 @@ function Dashboard({
         amMap[am].notInterested++;
       }
       if (b.amountPitched) pitched++;
-      if (b.paymentLinkSent === 'Yes') paymentSent++;
-      if (b.closure === 'Yes') {
+      if (b.paymentLinkSent === 'Yes' && passDate(b.paymentLinkSentDate)) paymentSent++;
+      if (b.closure === 'Yes' && passDate(b.closureDate)) {
         closed++;
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
       }
-      if (b.amountPitched || b.closure) {
+      if (b.amountPitched || b.closure === 'Yes' || b.closure === 'No') {
         const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Unknown Sales';
         if (!salesMap[author]) salesMap[author] = {
           name: author,
@@ -2628,7 +2691,7 @@ function Dashboard({
           revenue: 0
         };
         if (b.amountPitched) salesMap[author].pitched++;
-        if (b.closure === 'Yes') {
+        if (b.closure === 'Yes' && passDate(b.closureDate)) {
           salesMap[author].closed++;
           salesMap[author].revenue += Number(b.closureAmount) || 0;
         }
@@ -2648,7 +2711,7 @@ function Dashboard({
       amList: Object.values(amMap).sort((a, b) => b.demoBooked - a.demoBooked),
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
-  }, [sellers, layerB]);
+  }, [sellers, layerB, dateFrom, dateTo]);
   const funnelData = [{
     label: 'All Sellers',
     val: stats.total,
@@ -2719,8 +2782,57 @@ function Dashboard({
     layerB: layerB
   }), /*#__PURE__*/React.createElement("div", {
     style: {
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginBottom: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)',
+      fontWeight: 600
+    }
+  }, "📅 Filter Demo Done / Payment Link Sent / Closed Won by date"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: dateFrom,
+    onChange: e => setDateFrom(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "to"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: dateTo,
+    onChange: e => setDateTo(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none'
+    }
+  }), (dateFrom || dateTo) && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => {
+      setDateFrom('');
+      setDateTo('');
+    }
+  }, "✕ Clear")), /*#__PURE__*/React.createElement("div", {
+    className: "pipeline-grid",
+    style: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
       gap: 16,
       marginBottom: 16
     }
@@ -2890,7 +3002,7 @@ function Dashboard({
       textAlign: 'right'
     }
   }, maxFunnel ? Math.round(row.val / maxFunnel * 100) : 0, "%")))), /*#__PURE__*/React.createElement("div", {
-    className: "am-perf-wrap"
+    className: `am-perf-wrap${autoFit ? ' auto-fit' : ''}`
   }, /*#__PURE__*/React.createElement("div", {
     className: "am-perf-head"
   }, /*#__PURE__*/React.createElement("div", {
@@ -2904,12 +3016,26 @@ function Dashboard({
       background: 'var(--blue)'
     }
   }), "AM Performance"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => setAutoFit(f => !f),
+    title: "Toggle auto-fit AM name widths to content",
+    style: {
+      fontWeight: autoFit ? 700 : 400,
+      color: autoFit ? 'var(--accent)' : undefined
+    }
+  }, "⤢ Auto-resize Columns"), /*#__PURE__*/React.createElement("div", {
     className: "tab-pills"
   }, ['leaderboard', 'bar chart', 'cards'].map(v => /*#__PURE__*/React.createElement("div", {
     key: v,
     className: `tab-pill${amView === v ? ' active' : ''}`,
     onClick: () => setAmView(v)
-  }, v.charAt(0).toUpperCase() + v.slice(1))))), amView === 'leaderboard' && /*#__PURE__*/React.createElement("div", {
+  }, v.charAt(0).toUpperCase() + v.slice(1)))))), amView === 'leaderboard' && /*#__PURE__*/React.createElement("div", {
     className: "leaderboard"
   }, sortedAM.slice(0, 10).map((am, i) => /*#__PURE__*/React.createElement("div", {
     key: am.name,
@@ -2963,9 +3089,9 @@ function Dashboard({
       marginTop: 6
     }
   }, "Bar = Demo Booked · Right = Demo Done")), amView === 'cards' && /*#__PURE__*/React.createElement("div", {
+    className: "am-cards-grid",
     style: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(3,1fr)',
       gap: 12,
       padding: 18
     }
@@ -3052,7 +3178,168 @@ function Dashboard({
     }
   }, v), /*#__PURE__*/React.createElement("div", {
     className: "lb-stat-label"
-  }, l)))))))));
+  }, l))))))), /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-wrap",
+    style: {
+      marginBottom: 16
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "am-perf-head",
+    style: {
+      flexWrap: 'wrap',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--purple)'
+    }
+  }), "AM-wise Report"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap'
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: amRepFrom,
+    onChange: e => setAmRepFrom(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "to"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: amRepTo,
+    onChange: e => setAmRepTo(e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none'
+    }
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => {
+      setAmRepFrom(today());
+      setAmRepTo(today());
+    }
+  }, "Today"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '4px 18px 10px',
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "Demo Booked / Demo Done / Closed Won are counted by their own event date within the selected range — Connected, Interested and Pitched aren't date-stamped in the data, so they're left out of this report."), /*#__PURE__*/React.createElement("div", {
+    style: {
+      overflowX: 'auto'
+    }
+  }, /*#__PURE__*/React.createElement("table", {
+    style: {
+      width: '100%',
+      borderCollapse: 'collapse',
+      fontSize: 11.5
+    }
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: '#fafafa'
+    }
+  }, ['AM Name', 'Team', 'Demo Booked', 'Demo Done', 'Closed Won', 'Closed Revenue', 'Conv %'].map(h => /*#__PURE__*/React.createElement("th", {
+    key: h,
+    style: {
+      padding: '8px 14px',
+      textAlign: h === 'AM Name' || h === 'Team' ? 'left' : 'center',
+      fontWeight: 700,
+      fontSize: 10,
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: '#999',
+      borderBottom: '1px solid #e5e5e5',
+      whiteSpace: 'nowrap'
+    }
+  }, h)))), /*#__PURE__*/React.createElement("tbody", null, amDateReport.map((am, ri) => /*#__PURE__*/React.createElement("tr", {
+    key: am.name,
+    style: {
+      borderBottom: '1px solid #f5f5f5',
+      background: ri % 2 ? '#fafafa' : '#fff'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      fontWeight: 600,
+      color: '#333',
+      whiteSpace: 'nowrap'
+    }
+  }, am.name), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      color: 'var(--text3)',
+      whiteSpace: 'nowrap'
+    }
+  }, am.team), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: am.demoBooked ? 700 : 400,
+      color: am.demoBooked ? 'var(--blue)' : '#ddd'
+    }
+  }, am.demoBooked || '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: am.demoDone ? 700 : 400,
+      color: am.demoDone ? 'var(--green)' : '#ddd'
+    }
+  }, am.demoDone || '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: am.closed ? 700 : 400,
+      color: am.closed ? '#22c55e' : '#ddd'
+    }
+  }, am.closed || '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontSize: 11.5
+    }
+  }, am.revenue ? '₹' + fmtNum(am.revenue) : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '7px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700,
+      color: 'var(--text3)'
+    }
+  }, am.demoBooked ? Math.round(am.closed / am.demoBooked * 100) + '%' : '—'))), amDateReport.length === 0 && /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    colSpan: 7,
+    style: {
+      padding: '20px',
+      textAlign: 'center',
+      color: 'var(--text3)'
+    }
+  }, "No sellers loaded"))))))));
 }
 
 // ─── CALENDAR ────────────────────────────────────────────────────────────────
@@ -3080,7 +3367,8 @@ function CalendarView({
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Build events from layerB — demoBookedDate, including completed ones
+  // Build events from layerB — demoBookedDate (when the demo is/was scheduled for),
+  // so upcoming demos show up here, not just ones that have already happened.
   const events = useMemo(() => {
     const evs = [];
     sellers.forEach(s => {
@@ -3661,7 +3949,17 @@ function ConfigView() {
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(() => {
+    try {
+      const raw = localStorage.getItem('sg_session');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    if (session) localStorage.setItem('sg_session', JSON.stringify(session));else localStorage.removeItem('sg_session');
+  }, [session]);
   const [sellers, setSellers] = useState([]);
   const [layerB, setLayerB] = useState({});
   const layerBRef = useRef(layerB);
@@ -3734,22 +4032,29 @@ function App() {
     if (!silent) showMsg('Syncing activity data…', 'warn', 0);
     try {
       const remote = await sheetReadAll();
+      // Same protection as loadFromSheet: don't let a pull overwrite a local edit
+      // whose write to the Sheet hasn't actually succeeded yet.
+      let keptUnsynced = 0;
       setLayerB(prev => {
         const merged = {
           ...prev
         };
         Object.entries(remote).forEach(([id, b]) => {
+          if (pendingErrors[id]) {
+            keptUnsynced++;
+            return;
+          }
           merged[id] = b;
         });
         return merged;
       });
-      if (!silent) showMsg(`✓ Synced — ${Object.keys(remote).length} records`);
+      if (!silent) showMsg(keptUnsynced > 0 ? `✓ Synced — ${Object.keys(remote).length} records (${keptUnsynced} unsynced local change${keptUnsynced > 1 ? 's' : ''} kept)` : `✓ Synced — ${Object.keys(remote).length} records`);
     } catch (e) {
       if (!silent) showMsg(`Sync failed: ${e.message}`, 'error');
     } finally {
       setSyncing(false);
     }
-  }, []);
+  }, [pendingErrors]);
 
   // ── Write single seller's Layer B to Sheet ───────────────────────────────
   const updateLayerB = useCallback(async (id, patch) => {
@@ -3806,11 +4111,11 @@ function App() {
     id: 'sellers',
     icon: '🏪',
     label: 'Sellers'
-  }, ...(session?.role !== 'admin' ? [{
+  }, {
     id: 'calendar',
     icon: '📅',
     label: 'Calendar'
-  }] : []), ...(session?.role === 'admin' ? [{
+  }, ...(session?.role === 'admin' ? [{
     id: 'upload',
     icon: '📂',
     label: 'Upload CSV'
