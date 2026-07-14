@@ -116,12 +116,15 @@
 
   /* BADGES — outlined style for chalk */
   .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 3px; font-size: 10.5px; font-weight: 600; white-space: nowrap; border: 1px solid; }
-  .badge-p0 { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
-  .badge-p1 { border-color: #fcd34d; color: #b45309; background: #fffbeb; }
-  .badge-p2 { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
-  .badge-p3 { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .badge-platinum { border-color: #94a3b8; color: #334155; background: #f1f5f9; }
+  .badge-gold { border-color: #fbbf24; color: #92400e; background: #fffbeb; }
+  .badge-silver { border-color: #cbd5e1; color: #475569; background: #f8fafc; }
+  .badge-bronze { border-color: #fb923c; color: #9a3412; background: #fff7ed; }
   .badge-green { border-color: #86efac; color: #166534; background: #f0fdf4; }
+  .badge-lightgreen { border-color: #d9f99d; color: #4d7c0f; background: #f7fee7; }
   .badge-amber { border-color: #fcd34d; color: #b45309; background: #fffbeb; }
+  .badge-yellow { border-color: #fde047; color: #854d0e; background: #fefce8; }
+  .badge-orange { border-color: #fdba74; color: #c2410c; background: #fff7ed; }
   .badge-red { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
   .badge-blue { border-color: #93c5fd; color: #1d4ed8; background: #eff6ff; }
   .badge-purple { border-color: #d8b4fe; color: #6b21a8; background: #faf5ff; }
@@ -180,7 +183,7 @@
   .remarks-post-row { display: flex; justify-content: flex-end; margin-top: 8px; }
 
   /* DASHBOARD */
-  .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 18px; }
   .pipeline-grid { grid-template-columns: 1fr 1fr; }
   .am-cards-grid { grid-template-columns: repeat(3, 1fr); }
   .dash-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
@@ -191,6 +194,7 @@
   .dash-card-green { border-left: 2px solid var(--green); }
   .dash-card-amber { border-left: 2px solid var(--amber); }
   .dash-card-red { border-left: 2px solid var(--red); }
+  .dash-card-purple { border-left: 2px solid var(--purple); }
   .section-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
   .section-title .dot { width: 5px; height: 5px; border-radius: 50%; }
   .funnel-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
@@ -372,7 +376,7 @@ const {
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const PROGRAMS = ['All', 'accelerate', 'elevatePlus'];
-const TIERS = ['All', 'P0', 'P1', 'P2', 'P3'];
+const TIERS = ['All', 'Platinum', 'Gold', 'Silver', 'Bronze'];
 const DISPOSITION_OPTS = ['—', 'Not Responding', 'Call Later', 'Interested', 'Not Interested', 'Demo Booked'];
 const DEMO_STATUS_OPTS = ['—', 'Not Responding before Demo', 'Not Responding after Demo', 'Call Later', 'No Show', 'Requires Follow Up', 'Completed', 'Not Interested'];
 const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
@@ -391,10 +395,16 @@ const fmtNum = n => n != null && !isNaN(n) ? Number(n).toLocaleString('en-IN', {
 const fmtPct = s => s && s !== '—' ? s : '—';
 function tierBadge(t) {
   const cls = {
-    P0: 'badge-p0',
-    P1: 'badge-p1',
-    P2: 'badge-p2',
-    P3: 'badge-p3'
+    // New tier names (current sheet values)
+    Platinum: 'badge-platinum',
+    Gold: 'badge-gold',
+    Silver: 'badge-silver',
+    Bronze: 'badge-bronze',
+    // Legacy tier codes — mapped to the same colors so any not-yet-migrated rows still render sensibly
+    P0: 'badge-platinum',
+    P1: 'badge-gold',
+    P2: 'badge-silver',
+    P3: 'badge-bronze'
   };
   return /*#__PURE__*/React.createElement("span", {
     className: `badge ${cls[t] || 'badge-gray'}`
@@ -402,11 +412,11 @@ function tierBadge(t) {
 }
 function dispositionBadge(d) {
   const map = {
-    'Demo Booked': 'badge-blue',
-    'Interested': 'badge-green',
-    'Not Responding': 'badge-red',
-    'Not Interested': 'badge-red',
-    'Call Later': 'badge-amber'
+    'Demo Booked': 'badge-green',
+    'Interested': 'badge-lightgreen',
+    'Call Later': 'badge-blue',
+    'Not Responding': 'badge-yellow',
+    'Not Interested': 'badge-red'
   };
   return /*#__PURE__*/React.createElement("span", {
     className: `badge ${map[d] || 'badge-gray'}`
@@ -414,13 +424,13 @@ function dispositionBadge(d) {
 }
 function demoStatusBadge(d) {
   const map = {
+    'Not Responding before Demo': 'badge-amber',
+    'Not Responding after Demo': 'badge-orange',
+    'Call Later': 'badge-blue',
+    'No Show': 'badge-purple',
+    'Requires Follow Up': 'badge-yellow',
     'Completed': 'badge-green',
-    'Not Interested': 'badge-red',
-    'Requires Follow Up': 'badge-amber',
-    'Not Responding before Demo': 'badge-red',
-    'Not Responding after Demo': 'badge-red',
-    'No Show': 'badge-red',
-    'Call Later': 'badge-amber'
+    'Not Interested': 'badge-red'
   };
   return /*#__PURE__*/React.createElement("span", {
     className: `badge ${map[d] || 'badge-gray'}`
@@ -499,6 +509,21 @@ function saveCredentials(creds) {
 const SHEET_ID  = () => (getCredentials() || {}).sheetId  || '';
 const API_KEY   = () => (getCredentials() || {}).apiKey   || '';
 const PROXY_URL = () => (getCredentials() || {}).proxyUrl || '';
+
+// Edits whose write to the Sheet failed or couldn't be confirmed, persisted so a real
+// browser refresh (which wipes all in-memory React state) can't silently drop them —
+// without this, a reload arriving before the write is confirmed just overwrites the
+// edit with the stale value still sitting in the Sheet.
+function loadPendingEdits() {
+  try {
+    return JSON.parse(localStorage.getItem('sg_pending') || '{}');
+  } catch {
+    return {};
+  }
+}
+function savePendingEdits(obj) {
+  if (Object.keys(obj).length === 0) localStorage.removeItem('sg_pending');else localStorage.setItem('sg_pending', JSON.stringify(obj));
+}
 
 // Layer B column order (must match sheet header row)
 const LB_COLS = ['AdvertiserID', 'connectedRetention', 'disposition', 'demoBookedDate', 'demoStatus', 'demoTakenDate', 'lastFollowUpDate', 'intent', 'amountPitched', 'durationPitched', 'paymentLinkSent', 'paymentLinkSentDate', 'closure', 'closureDate', 'closureAmount', 'closureDuration', 'remarks'];
@@ -611,10 +636,15 @@ async function sheetWriteRow(id, b, existingRowIndex) {
   } catch (e) {
     if (e instanceof TypeError) {
       // Network/CORS-level failure (not an HTTP error response) — the Apps Script proxy
-      // often doesn't return readable CORS headers even though the write itself lands.
-      // Fire a best-effort opaque request instead of surfacing a false failure to the user.
+      // often doesn't return readable CORS headers even though the write itself lands, so
+      // this ISN'T necessarily a real failure. Fire a best-effort opaque request, but tell
+      // the caller the outcome is unconfirmed rather than silently assuming success — on
+      // some networks/browsers this really is a failed write, and assuming success let a
+      // genuinely-lost edit get silently overwritten by stale Sheet data on the next reload.
       await fetch(PROXY_URL(), { method: 'POST', mode: 'no-cors', headers: {'Content-Type': 'text/plain'}, body }).catch(() => {});
-      return;
+      const unconfirmed = new Error('Could not confirm this reached the Sheet — kept locally until the next sync confirms it.');
+      unconfirmed.unconfirmed = true;
+      throw unconfirmed;
     }
     throw e;
   }
@@ -2642,7 +2672,8 @@ function Dashboard({
     let pitched = 0,
       paymentSent = 0,
       closed = 0,
-      closedRevenue = 0;
+      closedRevenue = 0,
+      pipelineRevenue = 0;
     const amMap = {};
     const salesMap = {};
     sellers.forEach(s => {
@@ -2685,6 +2716,12 @@ function Dashboard({
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
       }
+      // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched
+      // and a warm/hot intent — no date field exists for amountPitched, so this stays
+      // all-time like Pitched does, regardless of the date filter above.
+      if ((!b.closure || b.closure === '—') && b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot')) {
+        pipelineRevenue += Number(b.amountPitched) || 0;
+      }
       if (b.amountPitched || b.closure === 'Yes' || b.closure === 'No') {
         const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Unknown Sales';
         if (!salesMap[author]) salesMap[author] = {
@@ -2711,6 +2748,7 @@ function Dashboard({
       paymentSent,
       closed,
       closedRevenue,
+      pipelineRevenue,
       amList: Object.values(amMap).sort((a, b) => b.demoBooked - a.demoBooked),
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
@@ -2780,7 +2818,29 @@ function Dashboard({
     className: "dash-card-value"
   }, stats.closed), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "₹", fmtNum(stats.closedRevenue), " revenue"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+  }, "₹", fmtNum(stats.closedRevenue), " revenue")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-green"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Closure Revenue"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value",
+    style: {
+      fontSize: 22
+    }
+  }, "₹", fmtNum(stats.closedRevenue)), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, stats.closed, " deal", stats.closed !== 1 ? 's' : '', " closed")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-purple"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "Pipeline Revenue"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value",
+    style: {
+      fontSize: 22
+    }
+  }, "₹", fmtNum(stats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, "Open, Warm/Hot & pitched"))), /*#__PURE__*/React.createElement(ActivityTracker, {
     sellers: sellers,
     layerB: layerB
   }), /*#__PURE__*/React.createElement("div", {
@@ -3964,12 +4024,25 @@ function App() {
     if (session) localStorage.setItem('sg_session', JSON.stringify(session));else localStorage.removeItem('sg_session');
   }, [session]);
   const [sellers, setSellers] = useState([]);
-  const [layerB, setLayerB] = useState({});
+  // Seed layerB with any edits that were pending (unconfirmed/failed) from a previous
+  // session, so a real browser refresh doesn't lose them before the first load can even
+  // compare against the Sheet — see loadPendingEdits/savePendingEdits.
+  const [layerB, setLayerB] = useState(() => loadPendingEdits());
   const layerBRef = useRef(layerB);
   useEffect(() => { layerBRef.current = layerB; }, [layerB]);
-  // Advertiser IDs whose most recent write to the Sheet failed — kept out of the
-  // next reload's overwrite so an unsynced local edit isn't silently discarded.
-  const [pendingErrors, setPendingErrors] = useState({});
+  // Advertiser IDs whose most recent write to the Sheet failed or couldn't be confirmed —
+  // kept out of the next reload's overwrite so an unsynced local edit isn't silently
+  // discarded, and persisted to localStorage so this survives an actual page refresh.
+  const [pendingErrors, setPendingErrors] = useState(() => {
+    const flags = {};
+    Object.keys(loadPendingEdits()).forEach(id => { flags[id] = true; });
+    return flags;
+  });
+  useEffect(() => {
+    const toSave = {};
+    Object.keys(pendingErrors).forEach(id => { if (layerB[id]) toSave[id] = layerB[id]; });
+    savePendingEdits(toSave);
+  }, [pendingErrors, layerB]);
   const [page, setPage] = useState('dashboard');
   const [syncMsg, setSyncMsg] = useState(null);
   const [syncing, setSyncing] = useState(false);
@@ -4002,20 +4075,39 @@ function App() {
       try {
         layerBData = await sheetReadAll();
       } catch (e) {/* TrackerLayerB may not exist yet — ok */}
+      // Computed synchronously (not inside the setLayerB updater — a state updater's body
+      // isn't guaranteed to have run yet by the time code after the setState call reads
+      // variables it mutated, which silently broke the "kept unsynced" banner before).
+      const prev = layerBRef.current;
       let keptUnsynced = 0;
-      setLayerB(prev => {
-        const merged = {};
-        sellerData.forEach(s => {
-          const id = s['Advertiser ID'];
-          if (pendingErrors[id]) {
+      const confirmed = [];
+      const merged = {};
+      sellerData.forEach(s => {
+        const id = s['Advertiser ID'];
+        if (pendingErrors[id]) {
+          // The Sheet may have already caught up since this was marked pending (the
+          // earlier write may well have landed despite the unreadable response) — if
+          // the freshly-read row now matches what we tried to write, trust it and clear
+          // the pending flag instead of showing it as unsynced forever.
+          if (layerBData[id] && prev[id] && JSON.stringify(lbToRow(id, layerBData[id])) === JSON.stringify(lbToRow(id, prev[id]))) {
+            merged[id] = layerBData[id];
+            confirmed.push(id);
+          } else {
             merged[id] = prev[id] || layerBData[id] || initLayerB();
             keptUnsynced++;
-          } else {
-            merged[id] = layerBData[id] || prev[id] || initLayerB();
           }
-        });
-        return merged;
+        } else {
+          merged[id] = layerBData[id] || prev[id] || initLayerB();
+        }
       });
+      setLayerB(merged);
+      if (confirmed.length) {
+        setPendingErrors(prevErrs => {
+          const next = { ...prevErrs };
+          confirmed.forEach(id => delete next[id]);
+          return next;
+        });
+      }
       if (keptUnsynced > 0) {
         showMsg(`✓ ${sellerData.length} sellers loaded — ${keptUnsynced} unsynced local change${keptUnsynced > 1 ? 's' : ''} kept, click Sync to retry`, 'warn');
       } else {
@@ -4035,22 +4127,34 @@ function App() {
     if (!silent) showMsg('Syncing activity data…', 'warn', 0);
     try {
       const remote = await sheetReadAll();
-      // Same protection as loadFromSheet: don't let a pull overwrite a local edit
-      // whose write to the Sheet hasn't actually succeeded yet.
+      // Same protection as loadFromSheet: don't let a pull overwrite a local edit whose
+      // write to the Sheet hasn't actually succeeded yet — but if the remote row now
+      // matches what we tried to write, trust it and clear the pending flag. Computed
+      // synchronously (not inside the setLayerB updater — see loadFromSheet for why).
+      const prev = layerBRef.current;
       let keptUnsynced = 0;
-      setLayerB(prev => {
-        const merged = {
-          ...prev
-        };
-        Object.entries(remote).forEach(([id, b]) => {
-          if (pendingErrors[id]) {
+      const confirmed = [];
+      const merged = { ...prev };
+      Object.entries(remote).forEach(([id, b]) => {
+        if (pendingErrors[id]) {
+          if (prev[id] && JSON.stringify(lbToRow(id, b)) === JSON.stringify(lbToRow(id, prev[id]))) {
+            merged[id] = b;
+            confirmed.push(id);
+          } else {
             keptUnsynced++;
-            return;
           }
-          merged[id] = b;
-        });
-        return merged;
+          return;
+        }
+        merged[id] = b;
       });
+      setLayerB(merged);
+      if (confirmed.length) {
+        setPendingErrors(prevErrs => {
+          const next = { ...prevErrs };
+          confirmed.forEach(id => delete next[id]);
+          return next;
+        });
+      }
       if (!silent) showMsg(keptUnsynced > 0 ? `✓ Synced — ${Object.keys(remote).length} records (${keptUnsynced} unsynced local change${keptUnsynced > 1 ? 's' : ''} kept)` : `✓ Synced — ${Object.keys(remote).length} records`);
     } catch (e) {
       if (!silent) showMsg(`Sync failed: ${e.message}`, 'error');
@@ -4075,7 +4179,10 @@ function App() {
         return next;
       });
     } catch (e) {
-      showMsg(`Write failed: ${e.message}`, 'error');
+      // An unconfirmed write (opaque CORS response) may well have actually landed — don't
+      // cry wolf. Either way, keep it protected from being overwritten by stale Sheet data
+      // until a reload/sync confirms what actually happened.
+      if (!e.unconfirmed) showMsg(`Write failed: ${e.message}`, 'error');
       setPendingErrors(prev => ({ ...prev, [id]: true }));
     }
   }, []);
