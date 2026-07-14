@@ -2716,10 +2716,10 @@ function Dashboard({
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
       }
-      // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched
-      // and a warm/hot intent — no date field exists for amountPitched, so this stays
-      // all-time like Pitched does, regardless of the date filter above.
-      if ((!b.closure || b.closure === '—') && b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot')) {
+      // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched —
+      // no date field exists for amountPitched, so this stays all-time like Pitched does,
+      // regardless of the date filter above.
+      if ((!b.closure || b.closure === '—') && b.amountPitched) {
         pipelineRevenue += Number(b.amountPitched) || 0;
       }
       if (b.amountPitched || b.closure === 'Yes' || b.closure === 'No') {
@@ -2840,7 +2840,7 @@ function Dashboard({
     }
   }, "₹", fmtNum(stats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "Open, Warm/Hot & pitched"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+  }, "Open & pitched"))), /*#__PURE__*/React.createElement(ActivityTracker, {
     sellers: sellers,
     layerB: layerB
   }), /*#__PURE__*/React.createElement("div", {
