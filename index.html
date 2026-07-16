@@ -4156,10 +4156,30 @@ function App() {
           return next;
         });
       }
+
+      // The banner promises "click Sync to retry" — actually retry the write for anything
+      // still unconfirmed, instead of only ever re-checking whether it landed on its own.
+      let retried = [];
+      let stillPending = keptIds;
+      if (keptIds.length > 0) {
+        const results = await Promise.allSettled(keptIds.map(id => sheetWriteRow(id, merged[id])));
+        retried = keptIds.filter((id, i) => results[i].status === 'fulfilled');
+        stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
+        if (retried.length) {
+          setPendingErrors(prevErrs => {
+            const next = { ...prevErrs };
+            retried.forEach(id => delete next[id]);
+            return next;
+          });
+        }
+      }
+
       if (!silent) {
-        if (keptIds.length > 0) {
-          const names = keptIds.map(id => sellers.find(s => s['Advertiser ID'] === id)?.['Store Name'] || id).join(', ');
-          showMsg(`✓ Synced — ${Object.keys(remote).length} records (${keptIds.length} unsynced local change${keptIds.length > 1 ? 's' : ''} kept: ${names})`, 'warn', 6000);
+        if (stillPending.length > 0) {
+          const names = stillPending.map(id => sellers.find(s => s['Advertiser ID'] === id)?.['Store Name'] || id).join(', ');
+          showMsg(`✓ Synced — ${Object.keys(remote).length} records (${stillPending.length} unsynced local change${stillPending.length > 1 ? 's' : ''} still kept: ${names})`, 'warn', 6000);
+        } else if (retried.length > 0) {
+          showMsg(`✓ Synced — ${Object.keys(remote).length} records (${retried.length} pending change${retried.length > 1 ? 's' : ''} confirmed)`);
         } else {
           showMsg(`✓ Synced — ${Object.keys(remote).length} records`);
         }
