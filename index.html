@@ -2634,8 +2634,8 @@ function Dashboard({
   const [dateTo, setDateTo] = useState('');
   const [amRepFrom, setAmRepFrom] = useState(today());
   const [amRepTo, setAmRepTo] = useState(today());
-  // Per-AM report for a specific day/period — only Demo Booked, Demo Done and Closed Won
-  // have a real event date in the data model, so those are the only counts here.
+  // Per-AM report for a specific booked-demo cohort. Completed and closed values are
+  // outcomes from that cohort, so the rows always flow Booked → Completed → Closed.
   const amDateReport = useMemo(() => {
     const inRange = d => !!d && (!amRepFrom || d >= amRepFrom) && (!amRepTo || d <= amRepTo);
     const map = {};
@@ -2650,9 +2650,12 @@ function Dashboard({
         closed: 0,
         revenue: 0
       };
-      if (inRange(b.demoBookedDate)) map[am].demoBooked++;
-      if ((b.demoStatus === 'Completed' || b.demoTakenDate) && inRange(b.demoTakenDate)) map[am].demoDone++;
-      if (b.closure === 'Yes' && inRange(b.closureDate)) {
+      const completed = b.demoStatus === 'Completed' || !!b.demoTakenDate;
+      const booked = b.disposition === 'Demo Booked' || !!b.demoBookedDate || completed;
+      if (!booked || !inRange(b.demoBookedDate)) return;
+      map[am].demoBooked++;
+      if (completed) map[am].demoDone++;
+      if (completed && b.closure === 'Yes') {
         map[am].closed++;
         map[am].revenue += Number(b.closureAmount) || 0;
       }
@@ -2661,9 +2664,8 @@ function Dashboard({
   }, [sellers, layerB, amRepFrom, amRepTo]);
   const stats = useMemo(() => {
     const hasDateFilter = !!(dateFrom || dateTo);
-    // Demo Done / Payment Link Sent / Closed Won are the only pipeline metrics with a
-    // real event date attached — Connected, Demo Booked, Interested, Not Interested and
-    // Pitched have no date field in the data model, so they stay all-time regardless.
+    // Demo Booked is a cohort: subsequent completion and closure stages are counted
+    // only when they belong to that cohort.
     const passDate = d => !hasDateFilter || (d && (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo));
     let total = sellers.length,
       connected = 0,
@@ -2695,11 +2697,15 @@ function Dashboard({
         connected++;
         amMap[am].connected++;
       }
-      if (b.disposition === 'Demo Booked') {
+      const completed = b.demoStatus === 'Completed' || !!b.demoTakenDate;
+      const booked = b.disposition === 'Demo Booked' || !!b.demoBookedDate || completed;
+      const completedInRange = completed && passDate(b.demoTakenDate);
+      const closedInRange = completedInRange && b.closure === 'Yes' && passDate(b.closureDate);
+      if (booked) {
         demoBooked++;
         amMap[am].demoBooked++;
       }
-      if ((b.demoStatus === 'Completed' || b.demoTakenDate) && passDate(b.demoTakenDate)) {
+      if (completedInRange) {
         demoDone++;
         amMap[am].demoDone++;
       }
@@ -2713,7 +2719,7 @@ function Dashboard({
       }
       if (b.amountPitched) pitched++;
       if (b.paymentLinkSent === 'Yes' && passDate(b.paymentLinkSentDate)) paymentSent++;
-      if (b.closure === 'Yes' && passDate(b.closureDate)) {
+      if (closedInRange) {
         closed++;
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
@@ -2724,7 +2730,9 @@ function Dashboard({
       if ((!b.closure || b.closure === '—') && b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot')) {
         pipelineRevenue += Number(b.amountPitched) || 0;
       }
-      if (b.amountPitched || b.closure === 'Yes' || b.closure === 'No') {
+      // Sales performance is also a cohort: a close is shown only against a
+      // recorded pitch, so Closed cannot exceed Pitched for an executive.
+      if (b.amountPitched) {
         const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Sales';
         if (!salesMap[author]) salesMap[author] = {
           name: author,
@@ -2732,8 +2740,8 @@ function Dashboard({
           closed: 0,
           revenue: 0
         };
-        if (b.amountPitched) salesMap[author].pitched++;
-        if (b.closure === 'Yes' && passDate(b.closureDate)) {
+        salesMap[author].pitched++;
+        if (closedInRange) {
           salesMap[author].closed++;
           salesMap[author].revenue += Number(b.closureAmount) || 0;
         }
@@ -3338,7 +3346,7 @@ function Dashboard({
       fontSize: 11,
       color: 'var(--text3)'
     }
-  }, "Demo Booked / Demo Done / Closed Won are counted by their own event date within the selected range — Connected, Interested and Pitched aren't date-stamped in the data, so they're left out of this report."), /*#__PURE__*/React.createElement("div", {
+  }, "The selected dates define the Demo Booked cohort. Demo Done and Closed Won show the later outcomes from those booked demos, so every row flows from Booked → Completed → Closed."), /*#__PURE__*/React.createElement("div", {
     style: {
       overflowX: 'auto'
     }
