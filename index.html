@@ -203,6 +203,13 @@
   .funnel-bar-wrap { flex: 1; background: var(--surface2); border-radius: 3px; height: 20px; overflow: hidden; }
   .funnel-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; transition: width 0.5s ease; }
   .funnel-val { font-size: 11px; font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
+  .data-quality-wrap { background: #fff; border: 1px solid #fed7aa; border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+  .data-quality-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fffaf5; border-bottom: 1px solid #fed7aa; }
+  .data-quality-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .data-quality-item { padding: 10px 16px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .data-quality-seller { color: var(--text); font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .data-quality-issue { color: var(--red); font-size: 11px; }
+  .data-quality-more { padding: 10px 16px; color: var(--text3); font-size: 11px; }
   .am-perf-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
   /* Keep the sales leaderboard compact without changing the other dashboard panels. */
   .sales-performance-wrap { width: fit-content; max-width: 100%; }
@@ -2623,6 +2630,59 @@ function ActivityTracker({
   }, getGrandTotal()))))));
 }
 
+// ─── DATA QUALITY ALERTS ─────────────────────────────────────────────────────
+function DataQualityAlerts({
+  sellers,
+  layerB
+}) {
+  const alerts = useMemo(() => sellers.flatMap(s => {
+    const b = layerB[s['Advertiser ID']] || {};
+    const seller = s['Store Name'] || s['Advertiser ID'] || 'Unnamed seller';
+    const items = [];
+    if (b.demoStatus === 'Completed' && !b.demoTakenDate) items.push('Demo Completed is missing a Demo Taken Date');
+    if ((b.disposition === 'Demo Booked' || b.demoStatus === 'Completed' || b.demoTakenDate) && !b.demoBookedDate) items.push('Demo activity is missing a Demo Booked Date');
+    if (b.demoTakenDate && b.demoStatus !== 'Completed') items.push('Demo Taken Date is set but Demo Status is not Completed');
+    if (b.paymentLinkSent === 'Yes' && !b.paymentLinkSentDate) items.push('Payment Link Sent is missing its sent date');
+    if (b.closure === 'Yes' && !b.closureDate) items.push('Closed Won is missing a closure date');
+    if (b.closure === 'Yes' && !b.closureAmount) items.push('Closed Won is missing a closure amount');
+    return items.map((issue, i) => ({
+      key: `${s['Advertiser ID']}-${i}`,
+      seller,
+      issue
+    }));
+  }), [sellers, layerB]);
+  if (!alerts.length) return null;
+  const visibleAlerts = alerts.slice(0, 12);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-wrap"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-head"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-title",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "dot",
+    style: {
+      background: 'var(--amber)'
+    }
+  }), "Data Quality Alerts"), /*#__PURE__*/React.createElement("span", {
+    className: "badge badge-amber"
+  }, alerts.length, " issue", alerts.length === 1 ? '' : 's')), /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-list"
+  }, visibleAlerts.map(alert => /*#__PURE__*/React.createElement("div", {
+    key: alert.key,
+    className: "data-quality-item"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-seller"
+  }, alert.seller), /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-issue"
+  }, alert.issue)))), alerts.length > visibleAlerts.length && /*#__PURE__*/React.createElement("div", {
+    className: "data-quality-more"
+  }, "+", alerts.length - visibleAlerts.length, " more issue", alerts.length - visibleAlerts.length === 1 ? '' : 's'));
+}
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({
   sellers,
@@ -2662,6 +2722,17 @@ function Dashboard({
     });
     return Object.values(map).sort((a, b) => b.demoBooked - a.demoBooked);
   }, [sellers, layerB, amRepFrom, amRepTo]);
+  const amDateTotals = useMemo(() => amDateReport.reduce((totals, am) => ({
+    demoBooked: totals.demoBooked + am.demoBooked,
+    demoDone: totals.demoDone + am.demoDone,
+    closed: totals.closed + am.closed,
+    revenue: totals.revenue + am.revenue
+  }), {
+    demoBooked: 0,
+    demoDone: 0,
+    closed: 0,
+    revenue: 0
+  }), [amDateReport]);
   const stats = useMemo(() => {
     const hasDateFilter = !!(dateFrom || dateTo);
     // Demo Booked is a cohort: subsequent completion and closure stages are counted
@@ -2894,6 +2965,9 @@ function Dashboard({
   }, "₹", fmtNum(stats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
   }, "Open, Warm/Hot & pitched"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+    sellers: sellers,
+    layerB: layerB
+  }), /*#__PURE__*/React.createElement(DataQualityAlerts, {
     sellers: sellers,
     layerB: layerB
   }), /*#__PURE__*/React.createElement("div", {
@@ -3455,7 +3529,62 @@ function Dashboard({
       textAlign: 'center',
       color: 'var(--text3)'
     }
-  }, "No sellers loaded"))))))));
+  }, "No sellers loaded"))), /*#__PURE__*/React.createElement("tfoot", null, /*#__PURE__*/React.createElement("tr", {
+    style: {
+      background: '#f3f3f3',
+      borderTop: '2px solid var(--border)'
+    }
+  }, /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 14px',
+      fontWeight: 700,
+      color: 'var(--text)'
+    }
+  }, "Total"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 14px',
+      color: 'var(--text3)'
+    }
+  }, "—"), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700,
+      color: 'var(--blue)'
+    }
+  }, amDateTotals.demoBooked), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700,
+      color: 'var(--green)'
+    }
+  }, amDateTotals.demoDone), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 6px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700,
+      color: '#22c55e'
+    }
+  }, amDateTotals.closed), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700
+    }
+  }, amDateTotals.revenue ? '₹' + fmtNum(amDateTotals.revenue) : '—'), /*#__PURE__*/React.createElement("td", {
+    style: {
+      padding: '9px 14px',
+      textAlign: 'center',
+      fontFamily: 'JetBrains Mono',
+      fontWeight: 700,
+      color: 'var(--text)'
+    }
+  }, amDateTotals.demoBooked ? Math.round(amDateTotals.closed / amDateTotals.demoBooked * 100) + '%' : '—'))))))));
 }
 
 // ─── CALENDAR ────────────────────────────────────────────────────────────────
