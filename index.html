@@ -2686,15 +2686,14 @@ function Dashboard({
       if (!amMap[am]) amMap[am] = {
         name: am,
         team: s['Team Name'],
-        assigned: 0,
         connected: 0,
         demoBooked: 0,
         demoDone: 0,
         interested: 0,
         notInterested: 0,
-        closed: 0
+        closed: 0,
+        closedTierBonus: 0
       };
-      amMap[am].assigned++;
       if (b.connectedRetention === 'Yes') {
         connected++;
         amMap[am].connected++;
@@ -2722,9 +2721,20 @@ function Dashboard({
       if (b.amountPitched) pitched++;
       if (b.paymentLinkSent === 'Yes' && passDate(b.paymentLinkSentDate)) paymentSent++;
       if (closedInRange) {
+        const tierPoints = {
+          Platinum: 5,
+          Gold: 4,
+          Silver: 3,
+          Bronze: 2,
+          P0: 5,
+          P1: 4,
+          P2: 3,
+          P3: 2
+        }[s['UPDATED TIERING']] || 0;
         closed++;
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
+        amMap[am].closedTierBonus += tierPoints;
       }
       // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched
       // and a warm/hot intent — no date field exists for amountPitched, so this stays
@@ -2763,10 +2773,9 @@ function Dashboard({
       pipelineRevenue,
       amList: Object.values(amMap).map(am => ({
         ...am,
-        // Each seller can earn up to 100 points: Connected 5, Booked 15,
-        // Completed 30, and Closed Won 50. Divide by assigned sellers so
-        // AMs with different portfolio sizes are comparable.
-        score: am.assigned ? Math.round((am.connected * 5 + am.demoBooked * 15 + am.demoDone * 30 + am.closed * 50) / am.assigned * 10) / 10 : 0
+        // Raw leaderboard points: Connected 15, Booked 20, Completed 20,
+        // Closed Won 35, plus the closed account's tier bonus. Higher wins.
+        score: am.connected * 15 + am.demoBooked * 20 + am.demoDone * 20 + am.closed * 35 + am.closedTierBonus
       })).sort((a, b) => b.score - a.score || b.closed - a.closed || b.demoDone - a.demoDone),
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
@@ -3155,7 +3164,7 @@ function Dashboard({
     className: "lb-team"
   }, am.team)), /*#__PURE__*/React.createElement("div", {
     className: "lb-stats"
-  }, [['Score', `${am.score}%`, 'var(--purple)'], ['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Closed', am.closed, '#22c55e'], ['Connected', am.connected, 'var(--accent)'], ['Drop-off', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, [['Points', am.score, 'var(--purple)'], ['Tier Bonus', `+${am.closedTierBonus}`, 'var(--amber)'], ['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Closed', am.closed, '#22c55e'], ['Connected', am.connected, 'var(--accent)'], ['Drop-off', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     className: "lb-stat"
   }, /*#__PURE__*/React.createElement("div", {
