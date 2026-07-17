@@ -2686,6 +2686,7 @@ function Dashboard({
       if (!amMap[am]) amMap[am] = {
         name: am,
         team: s['Team Name'],
+        assigned: 0,
         connected: 0,
         demoBooked: 0,
         demoDone: 0,
@@ -2693,6 +2694,7 @@ function Dashboard({
         notInterested: 0,
         closed: 0
       };
+      amMap[am].assigned++;
       if (b.connectedRetention === 'Yes') {
         connected++;
         amMap[am].connected++;
@@ -2759,7 +2761,13 @@ function Dashboard({
       closed,
       closedRevenue,
       pipelineRevenue,
-      amList: Object.values(amMap).sort((a, b) => b.demoBooked - a.demoBooked),
+      amList: Object.values(amMap).map(am => ({
+        ...am,
+        // Each seller can earn up to 100 points: Connected 5, Booked 15,
+        // Completed 30, and Closed Won 50. Divide by assigned sellers so
+        // AMs with different portfolio sizes are comparable.
+        score: am.assigned ? Math.round((am.connected * 5 + am.demoBooked * 15 + am.demoDone * 30 + am.closed * 50) / am.assigned * 10) / 10 : 0
+      })).sort((a, b) => b.score - a.score || b.closed - a.closed || b.demoDone - a.demoDone),
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
   }, [sellers, layerB, dateFrom, dateTo]);
@@ -2813,10 +2821,10 @@ function Dashboard({
   const maxFunnel = stats.total || 1;
   const rankStyle = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
   const amSortKey = {
-    leaderboard: 'demoBooked',
+    leaderboard: 'score',
     'bar chart': 'demoDone'
   };
-  const sortedAM = [...stats.amList].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked']);
+  const sortedAM = [...stats.amList].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked'] || b.closed - a.closed || b.demoDone - a.demoDone);
   const maxAmVal = Math.max(1, ...sortedAM.map(a => a.demoBooked));
   return /*#__PURE__*/React.createElement("div", {
     className: "content"
@@ -3147,7 +3155,7 @@ function Dashboard({
     className: "lb-team"
   }, am.team)), /*#__PURE__*/React.createElement("div", {
     className: "lb-stats"
-  }, [['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Closed', am.closed, '#22c55e'], ['Connected', am.connected, 'var(--accent)'], ['Drop-off', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, [['Score', `${am.score}%`, 'var(--purple)'], ['Demo Booked', am.demoBooked, 'var(--blue)'], ['Demo Done', am.demoDone, 'var(--green)'], ['Closed', am.closed, '#22c55e'], ['Connected', am.connected, 'var(--accent)'], ['Drop-off', am.notInterested, 'var(--red)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: l,
     className: "lb-stat"
   }, /*#__PURE__*/React.createElement("div", {
