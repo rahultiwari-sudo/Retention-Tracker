@@ -2726,7 +2726,7 @@ function Dashboard({
         pipelineRevenue += Number(b.amountPitched) || 0;
       }
       if (b.amountPitched || b.closure === 'Yes' || b.closure === 'No') {
-        const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Unknown Sales';
+        const author = b.remarks?.findLast?.(r => r.role === 'SALES')?.author || 'Sales';
         if (!salesMap[author]) salesMap[author] = {
           name: author,
           pitched: 0,
