@@ -204,9 +204,8 @@
   .funnel-bar { height: 100%; border-radius: 3px; display: flex; align-items: center; padding-left: 8px; transition: width 0.5s ease; }
   .funnel-val { font-size: 11px; font-weight: 600; color: #fff; font-family: 'JetBrains Mono', monospace; }
   .am-perf-wrap { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
-  /* Dashboard reports should fit their columns instead of stretching across the page. */
-  .dashboard-content .am-perf-wrap { width: fit-content; max-width: 100%; }
-  .dashboard-content .am-perf-wrap table { width: auto; }
+  /* Keep the sales leaderboard compact without changing the other dashboard panels. */
+  .sales-performance-wrap { width: fit-content; max-width: 100%; }
   .am-perf-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
   .tab-pills { display: flex; gap: 4px; }
   .tab-pill { padding: 4px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; cursor: pointer; background: var(--surface2); border: 1px solid var(--border); color: var(--text3); transition: all 0.1s; }
@@ -2812,7 +2811,7 @@ function Dashboard({
   const sortedAM = [...stats.amList].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked']);
   const maxAmVal = Math.max(1, ...sortedAM.map(a => a.demoBooked));
   return /*#__PURE__*/React.createElement("div", {
-    className: "content dashboard-content"
+    className: "content"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-grid"
   }, /*#__PURE__*/React.createElement("div", {
@@ -3236,7 +3235,7 @@ function Dashboard({
       paddingTop: 6
     }
   }, "Conv: ", am.demoBooked ? Math.round(am.demoDone / am.demoBooked * 100) : 0, "%"))))), stats.salesList.length > 0 && /*#__PURE__*/React.createElement("div", {
-    className: "am-perf-wrap"
+    className: "am-perf-wrap sales-performance-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "am-perf-head"
   }, /*#__PURE__*/React.createElement("div", {
