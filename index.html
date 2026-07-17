@@ -2756,6 +2756,32 @@ function Dashboard({
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
   }, [sellers, layerB, dateFrom, dateTo]);
+  // A completed demo can no longer be in the "Demo Booked" disposition, but it is
+  // still part of the booked-demo cohort. Build the funnel from that cohort so
+  // each stage is a subset of the preceding one.
+  const funnelStats = useMemo(() => {
+    const hasDateFilter = !!(dateFrom || dateTo);
+    const passDate = d => !hasDateFilter || (d && (!dateFrom || d >= dateFrom) && (!dateTo || d <= dateTo));
+    let demoBooked = 0,
+      demoCompleted = 0,
+      closedWon = 0;
+    sellers.forEach(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      const completed = b.demoStatus === 'Completed' || !!b.demoTakenDate;
+      const booked = b.disposition === 'Demo Booked' || !!b.demoBookedDate || completed;
+      if (!booked) return;
+      demoBooked++;
+      const completedInRange = completed && passDate(b.demoTakenDate);
+      if (!completedInRange) return;
+      demoCompleted++;
+      if (b.closure === 'Yes' && passDate(b.closureDate)) closedWon++;
+    });
+    return {
+      demoBooked,
+      demoCompleted,
+      closedWon
+    };
+  }, [sellers, layerB, dateFrom, dateTo]);
   const funnelData = [{
     label: 'All Sellers',
     val: stats.total,
@@ -2766,15 +2792,15 @@ function Dashboard({
     color: 'var(--blue)'
   }, {
     label: 'Demo Booked',
-    val: stats.demoBooked,
+    val: funnelStats.demoBooked,
     color: 'var(--amber)'
   }, {
     label: 'Demo Completed',
-    val: stats.demoDone,
+    val: funnelStats.demoCompleted,
     color: 'var(--green)'
   }, {
     label: 'Closed Won',
-    val: stats.closed,
+    val: funnelStats.closedWon,
     color: '#22c55e'
   }];
   const maxFunnel = stats.total || 1;
