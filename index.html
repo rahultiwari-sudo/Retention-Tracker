@@ -2641,7 +2641,9 @@ function DataQualityAlerts({
     const items = [];
     if (b.demoStatus === 'Completed' && !b.demoTakenDate) items.push('Demo Completed is missing a Demo Taken Date');
     if ((b.disposition === 'Demo Booked' || b.demoStatus === 'Completed' || b.demoTakenDate) && !b.demoBookedDate) items.push('Demo activity is missing a Demo Booked Date');
-    if (b.demoTakenDate && b.demoStatus !== 'Completed') items.push('Demo Taken Date is set but Demo Status is not Completed');
+    // "Not Interested" is a valid, resolved outcome of a demo that took place — not a
+    // data quality problem, so it shouldn't be flagged alongside genuinely stuck statuses.
+    if (b.demoTakenDate && b.demoStatus !== 'Completed' && b.demoStatus !== 'Not Interested') items.push('Demo Taken Date is set but Demo Status is not Completed or Not Interested');
     if (b.paymentLinkSent === 'Yes' && !b.paymentLinkSentDate) items.push('Payment Link Sent is missing its sent date');
     if (b.closure === 'Yes' && !b.closureDate) items.push('Closed Won is missing a closure date');
     if (b.closure === 'Yes' && !b.closureAmount) items.push('Closed Won is missing a closure amount');
