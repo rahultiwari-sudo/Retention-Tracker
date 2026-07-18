@@ -2846,9 +2846,9 @@ function Dashboard({
       pipelineRevenue,
       amList: Object.values(amMap).map(am => ({
         ...am,
-        // Raw leaderboard points: Connected 15, Booked 20, Completed 20,
-        // Closed Won 35, plus the closed account's tier bonus. Higher wins.
-        score: am.connected * 15 + am.demoBooked * 20 + am.demoDone * 20 + am.closed * 35 + am.closedTierBonus
+        // Raw leaderboard points: Connected 5, Booked 10, Completed 30,
+        // Closed Won 50, plus the closed account's tier bonus. Higher wins.
+        score: am.connected * 5 + am.demoBooked * 10 + am.demoDone * 30 + am.closed * 50 + am.closedTierBonus
       })).sort((a, b) => b.score - a.score || b.closed - a.closed || b.demoDone - a.demoDone),
       salesList: Object.values(salesMap).sort((a, b) => b.closed - a.closed)
     };
