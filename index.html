@@ -4298,7 +4298,6 @@ function App() {
       } else {
         showMsg(`✓ ${sellerData.length} sellers loaded from Sheet`);
       }
-      setPage('sellers');
     } catch (e) {
       showMsg(`Failed to load: ${e.message}`, 'error');
     } finally {
