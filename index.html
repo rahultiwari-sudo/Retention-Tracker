@@ -809,10 +809,12 @@ function SidePanel({
   const amEditable = role === 'am' || role === 'admin';
   const salesEditable = role === 'sales' || role === 'admin';
   return /*#__PURE__*/React.createElement("div", {
-    className: "panel-overlay"
+    className: "panel-overlay",
+    onClick: onClose
   }, /*#__PURE__*/React.createElement("div", {
     className: "panel",
-    onMouseDown: e => e.stopPropagation()
+    onMouseDown: e => e.stopPropagation(),
+    onClick: e => e.stopPropagation()
   }, /*#__PURE__*/React.createElement("div", {
     className: "panel-head"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
@@ -2765,7 +2767,9 @@ function Dashboard({
         interested: 0,
         notInterested: 0,
         closed: 0,
-        closedTierBonus: 0
+        closedTierBonus: 0,
+        closedRevenue: 0,
+        pipelineRevenue: 0
       };
       if (b.connectedRetention === 'Yes') {
         connected++;
@@ -2808,12 +2812,14 @@ function Dashboard({
         closedRevenue += Number(b.closureAmount) || 0;
         amMap[am].closed++;
         amMap[am].closedTierBonus += tierPoints;
+        amMap[am].closedRevenue += Number(b.closureAmount) || 0;
       }
       // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched
       // and a warm/hot intent — no date field exists for amountPitched, so this stays
       // all-time like Pitched does, regardless of the date filter above.
       if ((!b.closure || b.closure === '—') && b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot')) {
         pipelineRevenue += Number(b.amountPitched) || 0;
+        amMap[am].pipelineRevenue += Number(b.amountPitched) || 0;
       }
       // Sales performance is also a cohort: a close is shown only against a
       // recorded pitch, so Closed cannot exceed Pitched for an executive.
@@ -3223,7 +3229,7 @@ function Dashboard({
     }
   }, "⤢ Auto-resize Columns"), /*#__PURE__*/React.createElement("div", {
     className: "tab-pills"
-  }, ['leaderboard', 'bar chart', 'cards'].map(v => /*#__PURE__*/React.createElement("div", {
+  }, ['leaderboard', 'bar chart', 'cards', 'revenue'].map(v => /*#__PURE__*/React.createElement("div", {
     key: v,
     className: `tab-pill${amView === v ? ' active' : ''}`,
     onClick: () => setAmView(v)
@@ -3335,7 +3341,30 @@ function Dashboard({
       borderTop: '1px solid var(--border)',
       paddingTop: 6
     }
-  }, "Conv: ", am.demoBooked ? Math.round(am.demoDone / am.demoBooked * 100) : 0, "%"))))), stats.salesList.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "Conv: ", am.demoBooked ? Math.round(am.demoDone / am.demoBooked * 100) : 0, "%"))))), amView === 'revenue' && /*#__PURE__*/React.createElement("div", {
+    className: "leaderboard"
+  }, [...sortedAM].sort((a, b) => b.closedRevenue - a.closedRevenue).map((am, i) => /*#__PURE__*/React.createElement("div", {
+    key: am.name,
+    className: "lb-row"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: `lb-rank ${rankStyle(i)}`
+  }, i + 1), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "lb-name"
+  }, am.name), /*#__PURE__*/React.createElement("div", {
+    className: "lb-team"
+  }, am.team)), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stats"
+  }, [['Closure Revenue', '₹' + fmtNum(am.closedRevenue), '#22c55e'], ['Pipeline Revenue', '₹' + fmtNum(am.pipelineRevenue), 'var(--purple)']].map(([l, v, c]) => /*#__PURE__*/React.createElement("div", {
+    key: l,
+    className: "lb-stat"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-val",
+    style: {
+      color: c
+    }
+  }, v), /*#__PURE__*/React.createElement("div", {
+    className: "lb-stat-label"
+  }, l))))))), stats.salesList.length > 0 && /*#__PURE__*/React.createElement("div", {
     className: "am-perf-wrap sales-performance-wrap"
   }, /*#__PURE__*/React.createElement("div", {
     className: "am-perf-head"
