@@ -1362,6 +1362,9 @@ function ColSelect({
     key: o
   }, o)));
 }
+function hasMoney(v) {
+  return String(v || '').trim() !== '' && String(v || '').trim() !== '—';
+}
 function SellerList({
   sellers,
   layerB,
@@ -1388,8 +1391,8 @@ function SellerList({
     disposition: 'All',
     demoStatus: 'All',
     intent: 'All',
-    amountPitched: '',
-    closureAmount: '',
+    amountPitched: 'All',
+    closureAmount: 'All',
     paymentLink: 'All',
     closure: 'All',
     amName: 'All'
@@ -1453,8 +1456,14 @@ function SellerList({
     if (c.intent !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.intent || '—') === c.intent);
     if (c.paymentLink !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') === c.paymentLink);
     if (c.closure !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === c.closure);
-    if (c.amountPitched) list = list.filter(s => String(layerB[s['Advertiser ID']]?.amountPitched || '').includes(c.amountPitched));
-    if (c.closureAmount) list = list.filter(s => String(layerB[s['Advertiser ID']]?.closureAmount || '').includes(c.closureAmount));
+    if (c.amountPitched === 'Has Amount') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched));
+    if (c.amountPitched === 'No Amount') list = list.filter(s => !hasMoney(layerB[s['Advertiser ID']]?.amountPitched));
+    if (c.amountPitched === 'Pitched But Not Closed') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched) && (layerB[s['Advertiser ID']]?.closure || '—') !== 'Yes');
+    if (c.amountPitched === 'Pitched But Payment Link Not Sent') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched) && (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') !== 'Yes');
+    if (c.closureAmount === 'Has Amount') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
+    if (c.closureAmount === 'No Amount') list = list.filter(s => !hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
+    if (c.closureAmount === 'Closed Won Missing Amount') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === 'Yes' && !hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
+    if (c.closureAmount === 'Closed Won With Amount') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === 'Yes' && hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
 
     // Sort
     list.sort((a, b) => {
@@ -1486,8 +1495,8 @@ function SellerList({
       disposition: 'All',
       demoStatus: 'All',
       intent: 'All',
-      amountPitched: '',
-      closureAmount: '',
+      amountPitched: 'All',
+      closureAmount: 'All',
       paymentLink: 'All',
       closure: 'All',
       amName: 'All'
@@ -1652,20 +1661,20 @@ function SellerList({
     sortKey: sortKey,
     sortDir: sortDir,
     onSort: onSort,
-    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
       value: colSearch.amountPitched,
       onChange: v => updateCol('amountPitched', v),
-      placeholder: "Filter amount..."
+      opts: ['All', 'Has Amount', 'No Amount', 'Pitched But Not Closed', 'Pitched But Payment Link Not Sent']
     })
   }, "Amount Pitched"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Closure Amount",
     sortKey: sortKey,
     sortDir: sortDir,
     onSort: onSort,
-    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
       value: colSearch.closureAmount,
       onChange: v => updateCol('closureAmount', v),
-      placeholder: "Filter closure..."
+      opts: ['All', 'Has Amount', 'No Amount', 'Closed Won With Amount', 'Closed Won Missing Amount']
     })
   }, "Closure Amount"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Payment Link",
