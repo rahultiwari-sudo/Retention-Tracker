@@ -1368,6 +1368,7 @@ function SellerList({
     demoStatus: 'All',
     intent: 'All',
     amountPitched: '',
+    closureAmount: '',
     paymentLink: 'All',
     closure: 'All',
     amName: 'All'
@@ -1409,6 +1410,7 @@ function SellerList({
       'Demo Status': b.demoStatus || '—',
       'Intent': b.intent || '—',
       'Amount Pitched': Number(b.amountPitched) || 0,
+      'Closure Amount': Number(b.closureAmount) || 0,
       'Payment Link': b.paymentLinkSent || '—',
       'Closure': b.closure || '—'
     };
@@ -1431,6 +1433,7 @@ function SellerList({
     if (c.paymentLink !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') === c.paymentLink);
     if (c.closure !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === c.closure);
     if (c.amountPitched) list = list.filter(s => String(layerB[s['Advertiser ID']]?.amountPitched || '').includes(c.amountPitched));
+    if (c.closureAmount) list = list.filter(s => String(layerB[s['Advertiser ID']]?.closureAmount || '').includes(c.closureAmount));
 
     // Sort
     list.sort((a, b) => {
@@ -1463,6 +1466,7 @@ function SellerList({
       demoStatus: 'All',
       intent: 'All',
       amountPitched: '',
+      closureAmount: '',
       paymentLink: 'All',
       closure: 'All',
       amName: 'All'
@@ -1633,6 +1637,16 @@ function SellerList({
       placeholder: "Filter amount..."
     })
   }, "Amount Pitched"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Closure Amount",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSearch, {
+      value: colSearch.closureAmount,
+      onChange: v => updateCol('closureAmount', v),
+      placeholder: "Filter closure..."
+    })
+  }, "Closure Amount"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Payment Link",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1672,6 +1686,11 @@ function SellerList({
         fontSize: 12
       }
     }, b.amountPitched ? '₹' + Number(b.amountPitched).toLocaleString('en-IN') : '—'), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontFamily: 'JetBrains Mono',
+        fontSize: 12
+      }
+    }, b.closureAmount ? '₹' + Number(b.closureAmount).toLocaleString('en-IN') : '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: `badge ${b.paymentLinkSent === 'Yes' ? 'badge-green' : 'badge-gray'}`
     }, b.paymentLinkSent || '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: `badge ${b.closure === 'Yes' ? 'badge-green' : b.closure === 'No' ? 'badge-red' : 'badge-gray'}`
@@ -4378,11 +4397,22 @@ function App() {
         retried = keptIds.filter((id, i) => results[i].status === 'fulfilled');
         stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
         if (retried.length) {
-          setPendingErrors(prevErrs => {
-            const next = { ...prevErrs };
-            retried.forEach(id => delete next[id]);
-            return next;
-          });
+          try {
+            const fresh = await sheetReadAll();
+            const confirmedAfterRetry = retried.filter(id => {
+              const remote = fresh[id];
+              return remote && prev[id] && JSON.stringify(lbToRow(id, remote)) === JSON.stringify(lbToRow(id, merged[id]));
+            });
+            if (confirmedAfterRetry.length) {
+              setPendingErrors(prevErrs => {
+                const next = { ...prevErrs };
+                confirmedAfterRetry.forEach(id => delete next[id]);
+                return next;
+              });
+            }
+            stillPending = stillPending.concat(retried.filter(id => !confirmedAfterRetry.includes(id)));
+            retried = confirmedAfterRetry;
+          } catch {}
         }
       }
 
