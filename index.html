@@ -2861,10 +2861,11 @@ function Dashboard({
         amMap[am].closedTierBonus += tierPoints;
         amMap[am].closedRevenue += Number(b.closureAmount) || 0;
       }
-      // Pipeline Revenue: include any intent for still-open deals with an amount pitched.
-      // Exclude records explicitly marked as closed ('Yes') or lost ('No').
-      // There's no date for amountPitched, so this remains an all-time metric.
-      if (b.amountPitched && b.closure !== 'Yes' && b.closure !== 'No') {
+      // Pipeline Revenue: include only Warm/Hot intents for still-open deals
+      // with an amount pitched. Exclude records explicitly marked as closed
+      // ('Yes') or lost ('No'). There's no date for amountPitched, so this
+      // remains an all-time metric.
+      if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No') {
         pipelineRevenue += Number(b.amountPitched) || 0;
         amMap[am].pipelineRevenue += Number(b.amountPitched) || 0;
       }
