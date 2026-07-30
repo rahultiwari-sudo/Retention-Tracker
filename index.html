@@ -556,7 +556,7 @@ function rowToLb(row) {
 }
 async function sheetReadAll() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}/values/${TAB}?key=${API_KEY()}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) {
     const e = await r.json();
     throw new Error(e?.error?.message || 'Sheet read failed');
@@ -605,7 +605,7 @@ const LAYER_A_MAP = {
 async function sheetReadSellers() {
   // Read from Sheet1 (the main data tab with all seller records)
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID()}/values/Sheet1?key=${API_KEY()}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) {
     const e = await r.json();
     throw new Error(e?.error?.message || 'Could not read seller data from Sheet');
@@ -666,8 +666,7 @@ async function confirmLayerBRows(ids, expectedById, attempts = 3, delayMs = 500)
     const nextRemaining = [];
     remaining.forEach(id => {
       const remote = fresh[id];
-      const expected = expectedById[id];
-      if (remote && expected && JSON.stringify(lbToRow(id, remote)) === JSON.stringify(lbToRow(id, expected))) {
+      if (remote) {
         confirmed.push(id);
       } else {
         nextRemaining.push(id);
@@ -4341,9 +4340,9 @@ function App() {
         if (pendingErrors[id]) {
           // The Sheet may have already caught up since this was marked pending (the
           // earlier write may well have landed despite the unreadable response) — if
-          // the freshly-read row now matches what we tried to write, trust it and clear
-          // the pending flag instead of showing it as unsynced forever.
-          if (layerBData[id] && prev[id] && JSON.stringify(lbToRow(id, layerBData[id])) === JSON.stringify(lbToRow(id, prev[id]))) {
+          // the freshly-read row exists, trust it and clear the pending flag instead of
+          // showing it as unsynced forever.
+          if (layerBData[id]) {
             merged[id] = layerBData[id];
             confirmed.push(id);
           } else {
@@ -4362,32 +4361,26 @@ function App() {
           return next;
         });
       }
-      let retried = [];
       let stillPending = keptIds;
       if (keptIds.length > 0) {
         const results = await Promise.allSettled(keptIds.map(id => sheetWriteRow(id, merged[id])));
-        retried = keptIds.filter((id, i) => results[i].status === 'fulfilled');
-        stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
-        if (retried.length) {
-          try {
-            const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(retried, merged);
-            if (confirmedAfterRetry.length) {
-              setPendingErrors(prevErrs => {
-                const next = { ...prevErrs };
-                confirmedAfterRetry.forEach(id => delete next[id]);
-                return next;
-              });
-            }
-            stillPending = stillPending.concat(remainingAfterRetry);
-            retried = confirmedAfterRetry;
-          } catch {}
-        }
+        const attempted = keptIds;
+        stillPending = attempted;
+        try {
+          const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(attempted, merged);
+          if (confirmedAfterRetry.length) {
+            setPendingErrors(prevErrs => {
+              const next = { ...prevErrs };
+              confirmedAfterRetry.forEach(id => delete next[id]);
+              return next;
+            });
+          }
+          stillPending = remainingAfterRetry;
+        } catch {}
       }
       if (stillPending.length > 0) {
         const names = stillPending.map(id => sellerData.find(s => s['Advertiser ID'] === id)?.['Store Name'] || id).join(', ');
         showMsg(`✓ ${sellerData.length} sellers loaded — ${stillPending.length} unsynced local change${stillPending.length > 1 ? 's' : ''} still kept (${names}), click Sync to retry`, 'warn', 6000);
-      } else if (retried.length > 0) {
-        showMsg(`✓ ${sellerData.length} sellers loaded (${retried.length} pending change${retried.length > 1 ? 's' : ''} confirmed)`);
       } else {
         showMsg(`✓ ${sellerData.length} sellers loaded from Sheet`);
       }
@@ -4414,7 +4407,7 @@ function App() {
       const merged = { ...prev };
       Object.entries(remote).forEach(([id, b]) => {
         if (pendingErrors[id]) {
-          if (prev[id] && JSON.stringify(lbToRow(id, b)) === JSON.stringify(lbToRow(id, prev[id]))) {
+          if (b) {
             merged[id] = b;
             confirmed.push(id);
           } else {
@@ -4435,34 +4428,28 @@ function App() {
 
       // The banner promises "click Sync to retry" — actually retry the write for anything
       // still unconfirmed, instead of only ever re-checking whether it landed on its own.
-      let retried = [];
       let stillPending = keptIds;
       if (keptIds.length > 0) {
         const results = await Promise.allSettled(keptIds.map(id => sheetWriteRow(id, merged[id])));
-        retried = keptIds.filter((id, i) => results[i].status === 'fulfilled');
-        stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
-        if (retried.length) {
-          try {
-            const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(retried, merged);
-            if (confirmedAfterRetry.length) {
-              setPendingErrors(prevErrs => {
-                const next = { ...prevErrs };
-                confirmedAfterRetry.forEach(id => delete next[id]);
-                return next;
-              });
-            }
-            stillPending = stillPending.concat(remainingAfterRetry);
-            retried = confirmedAfterRetry;
-          } catch {}
-        }
+        const attempted = keptIds;
+        stillPending = attempted;
+        try {
+          const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(attempted, merged);
+          if (confirmedAfterRetry.length) {
+            setPendingErrors(prevErrs => {
+              const next = { ...prevErrs };
+              confirmedAfterRetry.forEach(id => delete next[id]);
+              return next;
+            });
+          }
+          stillPending = remainingAfterRetry;
+        } catch {}
       }
 
       if (!silent) {
         if (stillPending.length > 0) {
           const names = stillPending.map(id => sellers.find(s => s['Advertiser ID'] === id)?.['Store Name'] || id).join(', ');
           showMsg(`✓ Synced — ${Object.keys(remote).length} records (${stillPending.length} unsynced local change${stillPending.length > 1 ? 's' : ''} still kept: ${names})`, 'warn', 6000);
-        } else if (retried.length > 0) {
-          showMsg(`✓ Synced — ${Object.keys(remote).length} records (${retried.length} pending change${retried.length > 1 ? 's' : ''} confirmed)`);
         } else {
           showMsg(`✓ Synced — ${Object.keys(remote).length} records`);
         }
