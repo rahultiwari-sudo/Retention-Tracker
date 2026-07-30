@@ -4410,14 +4410,16 @@ function App() {
     const merged = { ...(layerBRef.current[id] || initLayerB()), ...patch };
     layerBRef.current = { ...layerBRef.current, [id]: merged };
     setLayerB(prev => ({ ...prev, [id]: merged }));
+
+    // A successful response from the proxy does not prove that the new row is already
+    // readable from Sheets. Persist this snapshot *before* writing, and keep it marked
+    // pending until a later load/sync reads back the same value. Otherwise a refresh in
+    // that propagation window replaces the edit with the older Sheet value.
+    const savedPending = loadPendingEdits();
+    savePendingEdits({ ...savedPending, [id]: merged });
+    setPendingErrors(prev => ({ ...prev, [id]: true }));
     try {
       await sheetWriteRow(id, merged);
-      setPendingErrors(prev => {
-        if (!prev[id]) return prev;
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
     } catch (e) {
       // An unconfirmed write (opaque CORS response) may well have actually landed — don't
       // cry wolf. Either way, keep it protected from being overwritten by stale Sheet data
