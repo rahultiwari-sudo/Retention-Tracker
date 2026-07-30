@@ -658,6 +658,28 @@ async function sheetWriteRow(id, b, existingRowIndex) {
     throw e;
   }
 }
+async function confirmLayerBRows(ids, expectedById, attempts = 3, delayMs = 500) {
+  let remaining = [...ids];
+  const confirmed = [];
+  for (let attempt = 0; attempt < attempts && remaining.length > 0; attempt++) {
+    const fresh = await sheetReadAll();
+    const nextRemaining = [];
+    remaining.forEach(id => {
+      const remote = fresh[id];
+      const expected = expectedById[id];
+      if (remote && expected && JSON.stringify(lbToRow(id, remote)) === JSON.stringify(lbToRow(id, expected))) {
+        confirmed.push(id);
+      } else {
+        nextRemaining.push(id);
+      }
+    });
+    remaining = nextRemaining;
+    if (remaining.length > 0 && attempt < attempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  return { confirmed, remaining };
+}
 // No real access control is possible from a static, client-side file — this passcode
 // is only a soft deterrent against accidental clicks into Config/CSV upload, not security.
 // Change it by editing this constant directly in source.
@@ -4348,11 +4370,7 @@ function App() {
         stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
         if (retried.length) {
           try {
-            const fresh = await sheetReadAll();
-            const confirmedAfterRetry = retried.filter(id => {
-              const remote = fresh[id];
-              return remote && merged[id] && JSON.stringify(lbToRow(id, remote)) === JSON.stringify(lbToRow(id, merged[id]));
-            });
+            const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(retried, merged);
             if (confirmedAfterRetry.length) {
               setPendingErrors(prevErrs => {
                 const next = { ...prevErrs };
@@ -4360,7 +4378,7 @@ function App() {
                 return next;
               });
             }
-            stillPending = stillPending.concat(retried.filter(id => !confirmedAfterRetry.includes(id)));
+            stillPending = stillPending.concat(remainingAfterRetry);
             retried = confirmedAfterRetry;
           } catch {}
         }
@@ -4425,11 +4443,7 @@ function App() {
         stillPending = keptIds.filter((id, i) => results[i].status === 'rejected');
         if (retried.length) {
           try {
-            const fresh = await sheetReadAll();
-            const confirmedAfterRetry = retried.filter(id => {
-              const remote = fresh[id];
-              return remote && prev[id] && JSON.stringify(lbToRow(id, remote)) === JSON.stringify(lbToRow(id, merged[id]));
-            });
+            const { confirmed: confirmedAfterRetry, remaining: remainingAfterRetry } = await confirmLayerBRows(retried, merged);
             if (confirmedAfterRetry.length) {
               setPendingErrors(prevErrs => {
                 const next = { ...prevErrs };
@@ -4437,7 +4451,7 @@ function App() {
                 return next;
               });
             }
-            stillPending = stillPending.concat(retried.filter(id => !confirmedAfterRetry.includes(id)));
+            stillPending = stillPending.concat(remainingAfterRetry);
             retried = confirmedAfterRetry;
           } catch {}
         }
