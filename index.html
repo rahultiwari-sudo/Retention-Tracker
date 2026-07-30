@@ -4420,6 +4420,10 @@ function App() {
     setPendingErrors(prev => ({ ...prev, [id]: true }));
     try {
       await sheetWriteRow(id, merged);
+      // Confirm in the background after the Sheet has a moment to expose the new row.
+      // The edit remains locally protected during this interval, but users normally
+      // won't need to manually press Sync just to clear the pending indicator.
+      setTimeout(() => syncFromSheet(true), 750);
     } catch (e) {
       // An unconfirmed write (opaque CORS response) may well have actually landed — don't
       // cry wolf. Either way, keep it protected from being overwritten by stale Sheet data
@@ -4427,7 +4431,7 @@ function App() {
       if (!e.unconfirmed) showMsg(`Write failed: ${e.message}`, 'error');
       setPendingErrors(prev => ({ ...prev, [id]: true }));
     }
-  }, []);
+  }, [syncFromSheet]);
 
   // ── CSV upload: still available as admin tool to refresh Layer A ─────────
   const handleUpload = useCallback(async data => {
