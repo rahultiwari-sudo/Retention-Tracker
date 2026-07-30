@@ -2861,10 +2861,10 @@ function Dashboard({
         amMap[am].closedTierBonus += tierPoints;
         amMap[am].closedRevenue += Number(b.closureAmount) || 0;
       }
-      // Pipeline Revenue: still-open deals (closure not yet set) with an amount pitched
-      // and a Cold/Warm/Hot intent — no date field exists for amountPitched, so this stays
-      // all-time like Pitched does, regardless of the date filter above.
-      if ((!b.closure || b.closure === '—') && b.amountPitched && (b.intent === 'Cold' || b.intent === 'Warm' || b.intent === 'Hot')) {
+      // Pipeline Revenue: include any intent for still-open deals with an amount pitched.
+      // Exclude records explicitly marked as closed ('Yes') or lost ('No').
+      // There's no date for amountPitched, so this remains an all-time metric.
+      if (b.amountPitched && b.closure !== 'Yes' && b.closure !== 'No') {
         pipelineRevenue += Number(b.amountPitched) || 0;
         amMap[am].pipelineRevenue += Number(b.amountPitched) || 0;
       }
