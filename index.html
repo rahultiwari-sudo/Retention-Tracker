@@ -489,6 +489,11 @@ function initLayerB() {
     remarks: []
   };
 }
+function getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, id) {
+  const pending = !!pendingErrors?.[id];
+  if (pending) return layerB?.[id] || initLayerB();
+  return confirmedLayerB?.[id] || layerB?.[id] || initLayerB();
+}
 function normalizeLayerB(value) {
   const base = initLayerB();
   const next = { ...base, ...(value || {}) };
@@ -1380,9 +1385,13 @@ function SellerList({
   layerB,
   role,
   userName,
-  onUpdate
+  onUpdate,
+  pendingErrors,
+  confirmedLayerB,
+  onSyncPending
 }) {
   const [selected, setSelected] = useState(null);
+  const pendingPanelSyncRef = useRef(new Set());
   const [sortKey, setSortKey] = useState('Store Name');
   const [sortDir, setSortDir] = useState('asc');
   const [page, setPage] = useState(1);
@@ -1419,17 +1428,17 @@ function SellerList({
   const source = useMemo(() => {
     if (role === 'am') return sellers.filter(s => s['AM Name'] === userName);
     if (role === 'sales' || (role === 'admin' && adminView === 'sales')) return sellers.filter(s => {
-      const b = layerB[s['Advertiser ID']] || {};
+      const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
       // Sales should only see leads where demo is completed and a demo date exists.
       const completed = b.demoStatus === 'Completed' || !!b.demoTakenDate;
       return completed && !!b.demoTakenDate;
     });
     return sellers;
-  }, [sellers, role, userName, layerB, adminView]);
+  }, [sellers, role, userName, layerB, confirmedLayerB, pendingErrors, adminView]);
   const teams = useMemo(() => ['All', ...new Set(source.map(s => s['Team Name']).filter(Boolean).sort())], [source]);
   const amNames = useMemo(() => ['All', ...new Set(source.map(s => s['AM Name']).filter(Boolean).sort())], [source]);
   const getCellVal = useCallback((s, key) => {
-    const b = layerB[s['Advertiser ID']] || {};
+    const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
     const map = {
       'Store Name': s['Store Name'] || '',
       'AM Name': s['AM Name'] || '',
@@ -1447,7 +1456,7 @@ function SellerList({
       'Closure': b.closure || '—'
     };
     return map[key] ?? '';
-  }, [layerB]);
+  }, [layerB, confirmedLayerB, pendingErrors]);
   const filtered = useMemo(() => {
     let list = [...source];
     const c = colSearch;
@@ -1458,20 +1467,20 @@ function SellerList({
     if (c.wos) list = list.filter(s => String(s['WOS']).includes(c.wos));
     if (c.team !== 'All') list = list.filter(s => s['Team Name'] === c.team);
     if (c.amName !== 'All') list = list.filter(s => s['AM Name'] === c.amName);
-    if (c.connected !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.connectedRetention || '—') === c.connected);
-    if (c.disposition !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.disposition || '—') === c.disposition);
-    if (c.demoStatus !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.demoStatus || '—') === c.demoStatus);
-    if (c.intent !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.intent || '—') === c.intent);
-    if (c.paymentLink !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') === c.paymentLink);
-    if (c.closure !== 'All') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === c.closure);
-    if (c.amountPitched === 'Has Amount') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched));
-    if (c.amountPitched === 'No Amount') list = list.filter(s => !hasMoney(layerB[s['Advertiser ID']]?.amountPitched));
-    if (c.amountPitched === 'Pitched But Not Closed') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched) && (layerB[s['Advertiser ID']]?.closure || '—') !== 'Yes');
-    if (c.amountPitched === 'Pitched But Payment Link Not Sent') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.amountPitched) && (layerB[s['Advertiser ID']]?.paymentLinkSent || '—') !== 'Yes');
-    if (c.closureAmount === 'Has Amount') list = list.filter(s => hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
-    if (c.closureAmount === 'No Amount') list = list.filter(s => !hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
-    if (c.closureAmount === 'Closed Won Missing Amount') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === 'Yes' && !hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
-    if (c.closureAmount === 'Closed Won With Amount') list = list.filter(s => (layerB[s['Advertiser ID']]?.closure || '—') === 'Yes' && hasMoney(layerB[s['Advertiser ID']]?.closureAmount));
+    if (c.connected !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).connectedRetention || '—') === c.connected);
+    if (c.disposition !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).disposition || '—') === c.disposition);
+    if (c.demoStatus !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).demoStatus || '—') === c.demoStatus);
+    if (c.intent !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).intent || '—') === c.intent);
+    if (c.paymentLink !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).paymentLinkSent || '—') === c.paymentLink);
+    if (c.closure !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === c.closure);
+    if (c.amountPitched === 'Has Amount') list = list.filter(s => hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).amountPitched));
+    if (c.amountPitched === 'No Amount') list = list.filter(s => !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).amountPitched));
+    if (c.amountPitched === 'Pitched But Not Closed') list = list.filter(s => hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).amountPitched) && (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') !== 'Yes');
+    if (c.amountPitched === 'Pitched But Payment Link Not Sent') list = list.filter(s => hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).amountPitched) && (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).paymentLinkSent || '—') !== 'Yes');
+    if (c.closureAmount === 'Has Amount') list = list.filter(s => hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
+    if (c.closureAmount === 'No Amount') list = list.filter(s => !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
+    if (c.closureAmount === 'Closed Won Missing Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
+    if (c.closureAmount === 'Closed Won With Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
 
     // Sort
     list.sort((a, b) => {
@@ -1483,7 +1492,7 @@ function SellerList({
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
     return list;
-  }, [source, colSearch, sortKey, sortDir, layerB, getCellVal]);
+  }, [source, colSearch, sortKey, sortDir, layerB, confirmedLayerB, pendingErrors, getCellVal]);
   const onSort = col => {
     if (sortKey === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');else {
       setSortKey(col);
@@ -1491,6 +1500,17 @@ function SellerList({
     }
     setPage(1);
   };
+  const handleUpdate = useCallback((id, patch) => {
+    pendingPanelSyncRef.current.add(id);
+    onUpdate(id, patch);
+  }, [onUpdate]);
+  const handlePanelClose = useCallback(() => {
+    setSelected(null);
+    if (pendingPanelSyncRef.current.size > 0) {
+      pendingPanelSyncRef.current.clear();
+      onSyncPending?.();
+    }
+  }, [onSyncPending]);
   const activeFilters = Object.entries(colSearch).filter(([k, v]) => v !== '' && v !== 'All').length;
   const clearFilters = () => {
     setColSearch({
@@ -2076,8 +2096,8 @@ function SellerList({
     role: role,
     userName: userName,
     layerB: layerB,
-    onUpdate: onUpdate,
-    onClose: () => setSelected(null)
+    onUpdate: handleUpdate,
+    onClose: handlePanelClose
   }));
 }
 
@@ -4295,6 +4315,8 @@ function App() {
     if (session) localStorage.setItem('sg_session', JSON.stringify(session));else localStorage.removeItem('sg_session');
   }, [session]);
   const [sellers, setSellers] = useState([]);
+  const [confirmedLayerB, setConfirmedLayerB] = useState({});
+  const pendingWriteQueueRef = useRef(new Set());
   // Seed layerB with any edits that were pending (unconfirmed/failed) from a previous
   // session, so a real browser refresh doesn't lose them before the first load can even
   // compare against the Sheet — see loadPendingEdits/savePendingEdits.
@@ -4346,6 +4368,7 @@ function App() {
       try {
         layerBData = await sheetReadAll();
       } catch (e) {/* TrackerLayerB may not exist yet — ok */}
+      setConfirmedLayerB(layerBData);
       // Computed synchronously (not inside the setLayerB updater — a state updater's body
       // isn't guaranteed to have run yet by the time code after the setState call reads
       // variables it mutated, which silently broke the "kept unsynced" banner before).
@@ -4411,11 +4434,13 @@ function App() {
   }, [pendingErrors]);
 
   // ── Pull Layer B only (sync activity data) ───────────────────────────────
-  const syncFromSheet = useCallback(async (silent = false) => {
+  const syncFromSheet = useCallback(async (silent = false, options = {}) => {
+    const retryPending = options.retryPending !== false;
     setSyncing(true);
     if (!silent) showMsg('Syncing activity data…', 'warn', 0);
     try {
       const remote = await sheetReadAll();
+      setConfirmedLayerB(prev => ({ ...prev, ...remote }));
       // Same protection as loadFromSheet: don't let a pull overwrite a local edit whose
       // write to the Sheet hasn't actually succeeded yet — but if the remote row now
       // matches what we tried to write, trust it and clear the pending flag. Computed
@@ -4450,7 +4475,7 @@ function App() {
       // The banner promises "click Sync to retry" — actually retry the write for anything
       // still unconfirmed, instead of only ever re-checking whether it landed on its own.
       let stillPending = keptIds;
-      if (keptIds.length > 0) {
+      if (retryPending && keptIds.length > 0) {
         const results = await Promise.allSettled(keptIds.map(id => sheetWriteRow(id, merged[id])));
         const attempted = keptIds;
         stillPending = attempted;
@@ -4482,6 +4507,25 @@ function App() {
     }
   }, [pendingErrors, sellers]);
 
+  const flushPendingWrites = useCallback(async () => {
+    const ids = Array.from(pendingWriteQueueRef.current);
+    if (!ids.length) return;
+    pendingWriteQueueRef.current.clear();
+
+    for (const id of ids) {
+      const merged = layerBRef.current[id] || initLayerB();
+      try {
+        await sheetWriteRow(id, merged);
+      } catch (e) {
+        pendingWriteQueueRef.current.add(id);
+        if (!e.unconfirmed) showMsg(`Write failed: ${e.message}`, 'error');
+        setPendingErrors(prev => ({ ...prev, [id]: true }));
+      }
+    }
+
+    await syncFromSheet(true, { retryPending: false });
+  }, [syncFromSheet]);
+
   // ── Write single seller's Layer B to Sheet ───────────────────────────────
   const updateLayerB = useCallback(async (id, patch) => {
     // Build off layerBRef (kept in sync synchronously) rather than the `layerB` closed
@@ -4496,21 +4540,9 @@ function App() {
     // that propagation window replaces the edit with the older Sheet value.
     const savedPending = loadPendingEdits();
     savePendingEdits({ ...savedPending, [id]: merged });
+    pendingWriteQueueRef.current.add(id);
     setPendingErrors(prev => ({ ...prev, [id]: true }));
-    try {
-      await sheetWriteRow(id, merged);
-      // Confirm in the background after the Sheet has a moment to expose the new row.
-      // The edit remains locally protected during this interval, but users normally
-      // won't need to manually press Sync just to clear the pending indicator.
-      setTimeout(() => syncFromSheet(true), 750);
-    } catch (e) {
-      // An unconfirmed write (opaque CORS response) may well have actually landed — don't
-      // cry wolf. Either way, keep it protected from being overwritten by stale Sheet data
-      // until a reload/sync confirms what actually happened.
-      if (!e.unconfirmed) showMsg(`Write failed: ${e.message}`, 'error');
-      setPendingErrors(prev => ({ ...prev, [id]: true }));
-    }
-  }, [syncFromSheet]);
+  }, []);
 
   // ── CSV upload: still available as admin tool to refresh Layer A ─────────
   const handleUpload = useCallback(async data => {
@@ -4714,7 +4746,10 @@ function App() {
     layerB: layerB,
     role: session.role,
     userName: session.name,
-    onUpdate: updateLayerB
+    onUpdate: updateLayerB,
+    pendingErrors: pendingErrors,
+    confirmedLayerB: confirmedLayerB,
+    onSyncPending: flushPendingWrites
   }), !loading && sellers.length > 0 && page === 'calendar' && /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
