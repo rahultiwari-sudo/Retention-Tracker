@@ -489,6 +489,15 @@ function initLayerB() {
     remarks: []
   };
 }
+function normalizeLayerB(value) {
+  const base = initLayerB();
+  const next = { ...base, ...(value || {}) };
+  next.remarks = Array.isArray(value?.remarks) ? [...value.remarks] : [];
+  return next;
+}
+function layerBEquals(a, b) {
+  return JSON.stringify(normalizeLayerB(a)) === JSON.stringify(normalizeLayerB(b));
+}
 
 // ─── GOOGLE SHEET SYNC ────────────────────────────────────────────────────────
 // Credentials are NEVER hardcoded. Loaded from localStorage after first-run setup.
@@ -666,7 +675,8 @@ async function confirmLayerBRows(ids, expectedById, attempts = 3, delayMs = 500)
     const nextRemaining = [];
     remaining.forEach(id => {
       const remote = fresh[id];
-      if (remote) {
+      const expected = expectedById[id] || initLayerB();
+      if (remote && layerBEquals(remote, expected)) {
         confirmed.push(id);
       } else {
         nextRemaining.push(id);
@@ -4347,14 +4357,15 @@ function App() {
         const id = s['Advertiser ID'];
         if (pendingErrors[id]) {
           // The Sheet may have already caught up since this was marked pending (the
-          // earlier write may well have landed despite the unreadable response) — if
-          // the freshly-read row exists, trust it and clear the pending flag instead of
-          // showing it as unsynced forever.
-          if (layerBData[id]) {
+          // earlier write may well have landed despite the unreadable response) — only
+          // clear the pending flag if the freshly-read row actually matches the latest
+          // local edit, otherwise keep the local value visible and avoid a flicker.
+          const localValue = prev[id] || initLayerB();
+          if (layerBData[id] && layerBEquals(layerBData[id], localValue)) {
             merged[id] = layerBData[id];
             confirmed.push(id);
           } else {
-            merged[id] = prev[id] || layerBData[id] || initLayerB();
+            merged[id] = localValue;
             keptIds.push(id);
           }
         } else {
@@ -4415,10 +4426,12 @@ function App() {
       const merged = { ...prev };
       Object.entries(remote).forEach(([id, b]) => {
         if (pendingErrors[id]) {
-          if (b) {
+          const localValue = prev[id] || initLayerB();
+          if (b && layerBEquals(b, localValue)) {
             merged[id] = b;
             confirmed.push(id);
           } else {
+            merged[id] = localValue;
             keptIds.push(id);
           }
           return;
