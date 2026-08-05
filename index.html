@@ -2791,8 +2791,8 @@ function Dashboard({
     const next = new Date(year, month - 1 + direction, 1);
     setDashboardMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
   };
-  // The top revenue cards are monthly snapshots. Pipeline uses the payment-link
-  // date because it is the dated sales activity available for an amount pitched.
+  // The top revenue cards are monthly snapshots. Pipeline is grouped by the
+  // Tool Demo Taken Date, which ties each open opportunity to its demo month.
   const monthlyTopStats = useMemo(() => {
     let demoBooked = 0,
       closed = 0,
@@ -2806,7 +2806,7 @@ function Dashboard({
         closed++;
         closedRevenue += Number(b.closureAmount) || 0;
       }
-      if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No' && inSelectedMonth(b.paymentLinkSentDate)) {
+      if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No' && inSelectedMonth(b.demoTakenDate)) {
         pipelineRevenue += Number(b.amountPitched) || 0;
       }
     });
@@ -3108,7 +3108,7 @@ function Dashboard({
     }
   }, "₹", fmtNum(monthlyTopStats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "Open, Warm/Hot & sent this month"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+  }, "Open, Warm/Hot & demo taken this month"))), /*#__PURE__*/React.createElement(ActivityTracker, {
     sellers: sellers,
     layerB: layerB
   }), /*#__PURE__*/React.createElement(DataQualityAlerts, {
