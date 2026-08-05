@@ -183,6 +183,9 @@
   .remarks-post-row { display: flex; justify-content: flex-end; margin-top: 8px; }
 
   /* DASHBOARD */
+  .dashboard-month-nav { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 10px; }
+  .dashboard-month-label { min-width: 126px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text); }
+  .dashboard-month-nav .btn { min-width: 28px; justify-content: center; padding: 4px 8px; }
   .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 18px; }
   .pipeline-grid { grid-template-columns: 1fr 1fr; }
   .am-cards-grid { grid-template-columns: repeat(3, 1fr); }
@@ -2773,8 +2776,47 @@ function Dashboard({
   const [autoFit, setAutoFit] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [dashboardMonth, setDashboardMonth] = useState(today().slice(0, 7));
   const [amRepFrom, setAmRepFrom] = useState(today());
   const [amRepTo, setAmRepTo] = useState(today());
+  const dashboardMonthLabel = useMemo(() => {
+    const [year, month] = dashboardMonth.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric'
+    });
+  }, [dashboardMonth]);
+  const moveDashboardMonth = direction => {
+    const [year, month] = dashboardMonth.split('-').map(Number);
+    const next = new Date(year, month - 1 + direction, 1);
+    setDashboardMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+  };
+  // The top revenue cards are monthly snapshots. Pipeline uses the payment-link
+  // date because it is the dated sales activity available for an amount pitched.
+  const monthlyTopStats = useMemo(() => {
+    let demoBooked = 0,
+      closed = 0,
+      closedRevenue = 0,
+      pipelineRevenue = 0;
+    const inSelectedMonth = date => !!date && date.slice(0, 7) === dashboardMonth;
+    sellers.forEach(s => {
+      const b = layerB[s['Advertiser ID']] || {};
+      if (inSelectedMonth(b.demoBookedDate)) demoBooked++;
+      if (b.closure === 'Yes' && inSelectedMonth(b.closureDate)) {
+        closed++;
+        closedRevenue += Number(b.closureAmount) || 0;
+      }
+      if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No' && inSelectedMonth(b.paymentLinkSentDate)) {
+        pipelineRevenue += Number(b.amountPitched) || 0;
+      }
+    });
+    return {
+      demoBooked,
+      closed,
+      closedRevenue,
+      pipelineRevenue
+    };
+  }, [sellers, layerB, dashboardMonth]);
   // Per-AM report for a specific booked-demo cohort. Completed and closed values are
   // outcomes from that cohort, so the rows always flow Booked → Completed → Closed.
   const amDateReport = useMemo(() => {
@@ -2995,6 +3037,22 @@ function Dashboard({
   return /*#__PURE__*/React.createElement("div", {
     className: "content"
   }, /*#__PURE__*/React.createElement("div", {
+    className: "dashboard-month-nav",
+    "aria-label": "Dashboard month"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => moveDashboardMonth(-1),
+    title: "Previous month",
+    "aria-label": "Previous month"
+  }, "‹"), /*#__PURE__*/React.createElement("div", {
+    className: "dashboard-month-label",
+    "aria-live": "polite"
+  }, dashboardMonthLabel), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => moveDashboardMonth(1),
+    title: "Next month",
+    "aria-label": "Next month"
+  }, "›")), /*#__PURE__*/React.createElement("div", {
     className: "dash-grid"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-card dash-card-accent"
@@ -3018,17 +3076,17 @@ function Dashboard({
     className: "dash-card-label"
   }, "Demo Booked"), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-value"
-  }, stats.demoBooked), /*#__PURE__*/React.createElement("div", {
+  }, monthlyTopStats.demoBooked), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "Scheduled calls")), /*#__PURE__*/React.createElement("div", {
+  }, "Booked this month")), /*#__PURE__*/React.createElement("div", {
     className: "dash-card dash-card-red"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-card-label"
   }, "Closed Won"), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-value"
-  }, stats.closed), /*#__PURE__*/React.createElement("div", {
+  }, monthlyTopStats.closed), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "₹", fmtNum(stats.closedRevenue), " revenue")), /*#__PURE__*/React.createElement("div", {
+  }, "₹", fmtNum(monthlyTopStats.closedRevenue), " revenue")), /*#__PURE__*/React.createElement("div", {
     className: "dash-card dash-card-green"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-card-label"
@@ -3037,9 +3095,9 @@ function Dashboard({
     style: {
       fontSize: 22
     }
-  }, "₹", fmtNum(stats.closedRevenue)), /*#__PURE__*/React.createElement("div", {
+  }, "₹", fmtNum(monthlyTopStats.closedRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, stats.closed, " deal", stats.closed !== 1 ? 's' : '', " closed")), /*#__PURE__*/React.createElement("div", {
+  }, monthlyTopStats.closed, " deal", monthlyTopStats.closed !== 1 ? 's' : '', " closed this month")), /*#__PURE__*/React.createElement("div", {
     className: "dash-card dash-card-purple"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-card-label"
@@ -3048,9 +3106,9 @@ function Dashboard({
     style: {
       fontSize: 22
     }
-  }, "₹", fmtNum(stats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
+  }, "₹", fmtNum(monthlyTopStats.pipelineRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
-  }, "Open, Warm/Hot & pitched"))), /*#__PURE__*/React.createElement(ActivityTracker, {
+  }, "Open, Warm/Hot & sent this month"))), /*#__PURE__*/React.createElement(ActivityTracker, {
     sellers: sellers,
     layerB: layerB
   }), /*#__PURE__*/React.createElement(DataQualityAlerts, {
