@@ -1434,6 +1434,7 @@ function SellerList({
     intent: 'All',
     amountPitched: 'All',
     closureAmount: 'All',
+    closureDuration: 'All',
     paymentLink: 'All',
     closure: 'All',
     amName: 'All'
@@ -1485,6 +1486,7 @@ function SellerList({
       'Intent': b.intent || '—',
       'Amount Pitched': Number(b.amountPitched) || 0,
       'Closure Amount': Number(b.closureAmount) || 0,
+      'Closure Duration': parseDurationMonths(b.closureDuration),
       'Payment Link': b.paymentLinkSent || '—',
       'Closure': b.closure || '—'
     };
@@ -1514,6 +1516,7 @@ function SellerList({
     if (c.closureAmount === 'No Amount') list = list.filter(s => !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
     if (c.closureAmount === 'Closed Won Missing Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
     if (c.closureAmount === 'Closed Won With Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
+    if (c.closureDuration !== 'All') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureDuration || '—') === c.closureDuration);
     if ((role === 'sales' || (role === 'admin' && adminView === 'sales')) && salesDateFilter.field !== 'All') {
       const selectedDate = SALES_DATE_FILTERS.find(f => f.label === salesDateFilter.field);
       if (selectedDate) {
@@ -1569,6 +1572,7 @@ function SellerList({
       intent: 'All',
       amountPitched: 'All',
       closureAmount: 'All',
+      closureDuration: 'All',
       paymentLink: 'All',
       closure: 'All',
       amName: 'All'
@@ -1754,6 +1758,16 @@ function SellerList({
       opts: ['All', 'Has Amount', 'No Amount', 'Closed Won With Amount', 'Closed Won Missing Amount']
     })
   }, "Closure Amount"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Closure Duration",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.closureDuration,
+      onChange: v => updateCol('closureDuration', v),
+      opts: ['All', ...DURATION_OPTS]
+    })
+  }, "Closure Duration"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Payment Link",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1798,6 +1812,8 @@ function SellerList({
         fontSize: 12
       }
     }, b.closureAmount ? '₹' + Number(b.closureAmount).toLocaleString('en-IN') : '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, b.closureDuration || '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: `badge ${b.paymentLinkSent === 'Yes' ? 'badge-green' : 'badge-gray'}`
     }, b.paymentLinkSent || '—')), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: `badge ${b.closure === 'Yes' ? 'badge-green' : b.closure === 'No' ? 'badge-red' : 'badge-gray'}`
