@@ -406,6 +406,7 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {
 const fmtNum = n => n != null && !isNaN(n) ? Number(n).toLocaleString('en-IN', {
   maximumFractionDigits: 0
 }) : '—';
+const parseDurationMonths = value => Number(String(value || '').match(/\d+/)?.[0] || 0);
 const fmtPct = s => s && s !== '—' ? s : '—';
 function tierBadge(t) {
   const cls = {
@@ -2796,14 +2797,22 @@ function Dashboard({
     let demoBooked = 0,
       closed = 0,
       closedRevenue = 0,
+      mrrGenerated = 0,
+      mrrDeals = 0,
       pipelineRevenue = 0;
     const inSelectedMonth = date => !!date && date.slice(0, 7) === dashboardMonth;
     sellers.forEach(s => {
       const b = layerB[s['Advertiser ID']] || {};
       if (inSelectedMonth(b.demoBookedDate)) demoBooked++;
       if (b.closure === 'Yes' && inSelectedMonth(b.closureDate)) {
+        const closureAmount = Number(b.closureAmount) || 0;
+        const closureMonths = parseDurationMonths(b.closureDuration);
         closed++;
-        closedRevenue += Number(b.closureAmount) || 0;
+        closedRevenue += closureAmount;
+        if (closureAmount && closureMonths) {
+          mrrGenerated += closureAmount / closureMonths;
+          mrrDeals++;
+        }
       }
       if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No' && inSelectedMonth(b.demoTakenDate)) {
         pipelineRevenue += Number(b.amountPitched) || 0;
@@ -2813,6 +2822,8 @@ function Dashboard({
       demoBooked,
       closed,
       closedRevenue,
+      mrrGenerated,
+      mrrDeals,
       pipelineRevenue
     };
   }, [sellers, layerB, dashboardMonth]);
@@ -3097,6 +3108,17 @@ function Dashboard({
   }, "₹", fmtNum(monthlyTopStats.closedRevenue)), /*#__PURE__*/React.createElement("div", {
     className: "dash-card-sub"
   }, monthlyTopStats.closed, " deal", monthlyTopStats.closed !== 1 ? 's' : '', " closed this month")), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card dash-card-accent"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-label"
+  }, "MRR Generated"), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-value",
+    style: {
+      fontSize: 22
+    }
+  }, "₹", fmtNum(monthlyTopStats.mrrGenerated)), /*#__PURE__*/React.createElement("div", {
+    className: "dash-card-sub"
+  }, monthlyTopStats.mrrDeals, " deal", monthlyTopStats.mrrDeals !== 1 ? 's' : '', " with closure duration")), /*#__PURE__*/React.createElement("div", {
     className: "dash-card dash-card-purple"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dash-card-label"
