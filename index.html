@@ -397,6 +397,22 @@ const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
 const DURATION_OPTS = ['—', '1 Month', '2 Months', '3 Months', '6 Months', '12 Months'];
 const CLOSURE_OPTS = ['—', 'Yes', 'No'];
 const YN_OPTS = ['—', 'Yes', 'No'];
+const SALES_DATE_FILTERS = [{
+  label: 'Tool Demo Booked Date',
+  getDate: (s, b) => b.demoBookedDate
+}, {
+  label: 'Tool Demo Taken Date',
+  getDate: (s, b) => b.demoTakenDate
+}, {
+  label: 'Payment Link Sent Date',
+  getDate: (s, b) => b.paymentLinkSentDate
+}, {
+  label: 'Closure Date',
+  getDate: (s, b) => b.closureDate
+}, {
+  label: 'Onboarding Date',
+  getDate: s => s['Onboarding Date']
+}];
 const today = () => dateStr(new Date());
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {
   day: '2-digit',
@@ -1429,6 +1445,18 @@ function SellerList({
     }));
     setPage(1);
   };
+  const [salesDateFilter, setSalesDateFilter] = useState({
+    field: 'All',
+    from: '',
+    to: ''
+  });
+  const updateSalesDateFilter = (key, val) => {
+    setSalesDateFilter(p => ({
+      ...p,
+      [key]: val
+    }));
+    setPage(1);
+  };
 
   // Source: AM sees only their own sellers
   const source = useMemo(() => {
@@ -1486,6 +1514,16 @@ function SellerList({
     if (c.closureAmount === 'No Amount') list = list.filter(s => !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
     if (c.closureAmount === 'Closed Won Missing Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && !hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
     if (c.closureAmount === 'Closed Won With Amount') list = list.filter(s => (getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closure || '—') === 'Yes' && hasMoney(getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']).closureAmount));
+    if ((role === 'sales' || (role === 'admin' && adminView === 'sales')) && salesDateFilter.field !== 'All') {
+      const selectedDate = SALES_DATE_FILTERS.find(f => f.label === salesDateFilter.field);
+      if (selectedDate) {
+        list = list.filter(s => {
+          const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
+          const value = selectedDate.getDate(s, b);
+          return !!value && (!salesDateFilter.from || value >= salesDateFilter.from) && (!salesDateFilter.to || value <= salesDateFilter.to);
+        });
+      }
+    }
 
     // Sort
     list.sort((a, b) => {
@@ -1497,7 +1535,7 @@ function SellerList({
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
     return list;
-  }, [source, colSearch, sortKey, sortDir, layerB, confirmedLayerB, pendingErrors, getCellVal]);
+  }, [source, colSearch, salesDateFilter, sortKey, sortDir, layerB, confirmedLayerB, pendingErrors, getCellVal, role, adminView]);
   const onSort = col => {
     if (sortKey === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');else {
       setSortKey(col);
@@ -1516,7 +1554,8 @@ function SellerList({
       onSyncPending?.();
     }
   }, [onSyncPending]);
-  const activeFilters = Object.entries(colSearch).filter(([k, v]) => v !== '' && v !== 'All').length;
+  const isSalesView = role === 'sales' || (role === 'admin' && adminView === 'sales');
+  const activeFilters = Object.entries(colSearch).filter(([k, v]) => v !== '' && v !== 'All').length + (isSalesView && salesDateFilter.field !== 'All' ? 1 : 0);
   const clearFilters = () => {
     setColSearch({
       storeName: '',
@@ -1533,6 +1572,11 @@ function SellerList({
       paymentLink: 'All',
       closure: 'All',
       amName: 'All'
+    });
+    setSalesDateFilter({
+      field: 'All',
+      from: '',
+      to: ''
     });
     setPage(1);
   };
@@ -2037,7 +2081,94 @@ function SellerList({
   }, [10, 25, 50, 100].map(n => /*#__PURE__*/React.createElement("option", {
     key: n,
     value: n
-  }, n, " entries"))))), /*#__PURE__*/React.createElement("div", {
+  }, n, " entries"))))), isSalesView && /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 8,
+      background: '#fff',
+      border: '1px solid var(--border)',
+      borderRadius: 'var(--radius-sm)',
+      padding: '8px 10px',
+      marginBottom: 12
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: 'var(--text3)'
+    }
+  }, "Date Filter"), /*#__PURE__*/React.createElement("select", {
+    value: salesDateFilter.field,
+    onChange: e => e.target.value === 'All' ? setSalesDateFilter({
+      field: 'All',
+      from: '',
+      to: ''
+    }) : updateSalesDateFilter('field', e.target.value),
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '5px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: '#fff',
+      color: salesDateFilter.field === 'All' ? '#999' : '#111',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "All"
+  }, "All date fields"), SALES_DATE_FILTERS.map(f => /*#__PURE__*/React.createElement("option", {
+    key: f.label,
+    value: f.label
+  }, f.label))), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: salesDateFilter.from,
+    onChange: e => updateSalesDateFilter('from', e.target.value),
+    disabled: salesDateFilter.field === 'All',
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: salesDateFilter.field === 'All' ? 'var(--surface2)' : '#fff',
+      color: salesDateFilter.field === 'All' ? '#bbb' : '#333',
+      cursor: salesDateFilter.field === 'All' ? 'not-allowed' : 'pointer'
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: 'var(--text3)'
+    }
+  }, "to"), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: salesDateFilter.to,
+    onChange: e => updateSalesDateFilter('to', e.target.value),
+    disabled: salesDateFilter.field === 'All',
+    style: {
+      border: '1px solid #e5e5e5',
+      borderRadius: 4,
+      padding: '4px 8px',
+      fontSize: 12,
+      fontFamily: 'Inter',
+      outline: 'none',
+      background: salesDateFilter.field === 'All' ? 'var(--surface2)' : '#fff',
+      color: salesDateFilter.field === 'All' ? '#bbb' : '#333',
+      cursor: salesDateFilter.field === 'All' ? 'not-allowed' : 'pointer'
+    }
+  }), (salesDateFilter.field !== 'All' || salesDateFilter.from || salesDateFilter.to) && /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => setSalesDateFilter({
+      field: 'All',
+      from: '',
+      to: ''
+    })
+  }, "Clear Date")), /*#__PURE__*/React.createElement("div", {
     className: `table-wrap${autoFit ? ' auto-fit' : ''}`
   }, filtered.length === 0 ? /*#__PURE__*/React.createElement("div", {
     className: "empty-state"
