@@ -1434,9 +1434,8 @@ function SellerList({
     if (role === 'am') return sellers.filter(s => s['AM Name'] === userName);
     if (role === 'sales' || (role === 'admin' && adminView === 'sales')) return sellers.filter(s => {
       const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
-      // Sales should only see leads where demo is completed and a demo date exists.
-      const completed = b.demoStatus === 'Completed' || !!b.demoTakenDate;
-      return completed && !!b.demoTakenDate;
+      // Sales should only see leads with a completed demo and its taken date.
+      return b.demoStatus === 'Completed' && !!b.demoTakenDate;
     });
     return sellers;
   }, [sellers, role, userName, layerB, confirmedLayerB, pendingErrors, adminView]);
@@ -2725,9 +2724,7 @@ function DataQualityAlerts({
     const items = [];
     if (b.demoStatus === 'Completed' && !b.demoTakenDate) items.push('Demo Completed is missing a Demo Taken Date');
     if ((b.disposition === 'Demo Booked' || b.demoStatus === 'Completed' || b.demoTakenDate) && !b.demoBookedDate) items.push('Demo activity is missing a Demo Booked Date');
-    // "Not Interested" is a valid, resolved outcome of a demo that took place — not a
-    // data quality problem, so it shouldn't be flagged alongside genuinely stuck statuses.
-    if (b.demoTakenDate && b.demoStatus !== 'Completed' && b.demoStatus !== 'Not Interested') items.push('Demo Taken Date is set but Demo Status is not Completed or Not Interested');
+    if (b.demoTakenDate && b.demoStatus !== 'Completed') items.push('Demo Taken Date is set but Demo Status is not Completed');
     if (b.paymentLinkSent === 'Yes' && !b.paymentLinkSentDate) items.push('Payment Link Sent is missing its sent date');
     if (b.closure === 'Yes' && !b.closureDate) items.push('Closed Won is missing a closure date');
     if (b.closure === 'Yes' && !b.closureAmount) items.push('Closed Won is missing a closure amount');
