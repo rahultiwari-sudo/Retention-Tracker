@@ -3005,6 +3005,7 @@ function Dashboard({
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [dashboardMonth, setDashboardMonth] = useState(today().slice(0, 7));
+  const [leaderboardMonth, setLeaderboardMonth] = useState(today().slice(0, 7));
   const [amRepFrom, setAmRepFrom] = useState(today());
   const [amRepTo, setAmRepTo] = useState(today());
   const dashboardMonthLabel = useMemo(() => {
@@ -3018,6 +3019,18 @@ function Dashboard({
     const [year, month] = dashboardMonth.split('-').map(Number);
     const next = new Date(year, month - 1 + direction, 1);
     setDashboardMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
+  };
+  const leaderboardMonthLabel = useMemo(() => {
+    const [year, month] = leaderboardMonth.split('-').map(Number);
+    return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
+      month: 'long',
+      year: 'numeric'
+    });
+  }, [leaderboardMonth]);
+  const moveLeaderboardMonth = direction => {
+    const [year, month] = leaderboardMonth.split('-').map(Number);
+    const next = new Date(year, month - 1 + direction, 1);
+    setLeaderboardMonth(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`);
   };
   // The top revenue cards are monthly snapshots. Pipeline is grouped by the
   // Tool Demo Taken Date, which ties each open opportunity to its demo month.
@@ -3266,11 +3279,59 @@ function Dashboard({
   }];
   const maxFunnel = stats.total || 1;
   const rankStyle = i => i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+  const monthlyAMLeaderboard = useMemo(() => {
+    const inSelectedMonth = date => !!date && date.slice(0, 7) === leaderboardMonth;
+    const tierPointsMap = {
+      Platinum: 5,
+      Gold: 4,
+      Silver: 3,
+      Bronze: 2,
+      P0: 5,
+      P1: 4,
+      P2: 3,
+      P3: 2
+    };
+    const map = {};
+    sellers.forEach(s => {
+      const am = s['AM Name'] || 'Unknown';
+      const b = layerB[s['Advertiser ID']] || {};
+      if (!map[am]) map[am] = {
+        name: am,
+        team: s['Team Name'],
+        connected: 0,
+        demoBooked: 0,
+        demoDone: 0,
+        interested: 0,
+        notInterested: 0,
+        closed: 0,
+        closedTierBonus: 0,
+        closedRevenue: 0,
+        pipelineRevenue: 0
+      };
+      if (b.connectedRetention === 'Yes') map[am].connected++;
+      if (inSelectedMonth(b.demoBookedDate)) map[am].demoBooked++;
+      if ((b.demoStatus === 'Completed' || !!b.demoTakenDate) && inSelectedMonth(b.demoTakenDate)) map[am].demoDone++;
+      if (b.disposition === 'Interested' && (inSelectedMonth(b.lastFollowUpDate) || inSelectedMonth(b.demoTakenDate) || inSelectedMonth(b.demoBookedDate))) map[am].interested++;
+      if (b.disposition === 'Not Interested' && (inSelectedMonth(b.lastFollowUpDate) || inSelectedMonth(b.demoTakenDate) || inSelectedMonth(b.demoBookedDate))) map[am].notInterested++;
+      if (b.closure === 'Yes' && inSelectedMonth(b.closureDate)) {
+        map[am].closed++;
+        map[am].closedRevenue += Number(b.closureAmount) || 0;
+        map[am].closedTierBonus += tierPointsMap[s['Tier'] || s['UPDATED TIERING']] || 0;
+      }
+      if (b.amountPitched && (b.intent === 'Warm' || b.intent === 'Hot') && b.closure !== 'Yes' && b.closure !== 'No' && inSelectedMonth(b.demoTakenDate)) {
+        map[am].pipelineRevenue += Number(b.amountPitched) || 0;
+      }
+    });
+    return Object.values(map).map(am => ({
+      ...am,
+      score: am.demoBooked * 15 + am.demoDone * 30 + am.closed * 50 + am.closedTierBonus
+    }));
+  }, [sellers, layerB, leaderboardMonth]);
   const amSortKey = {
     leaderboard: 'score',
     'bar chart': 'demoDone'
   };
-  const sortedAM = [...stats.amList].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked'] || b.closed - a.closed || b.demoDone - a.demoDone);
+  const sortedAM = [...monthlyAMLeaderboard].sort((a, b) => b[amSortKey[amView] || 'demoBooked'] - a[amSortKey[amView] || 'demoBooked'] || b.closed - a.closed || b.demoDone - a.demoDone);
   const maxAmVal = Math.max(1, ...sortedAM.map(a => a.demoBooked));
   return /*#__PURE__*/React.createElement("div", {
     className: "content"
@@ -3600,7 +3661,36 @@ function Dashboard({
     }
   }), "AM Performance"), amView === 'leaderboard' && /*#__PURE__*/React.createElement("div", {
     className: "leaderboard-legend"
-  }, "Demo Booked 15 pts · Demo Done 30 pts · Closed Won 50 pts + tier bonus (Platinum +5, Gold +4, Silver +3, Bronze +2) · Connected 0 pts")), /*#__PURE__*/React.createElement("div", {
+  }, "Demo Booked 15 pts · Demo Done 30 pts · Closed Won 50 pts + tier bonus (Platinum +5, Gold +4, Silver +3, Bronze +2) · Connected 0 pts"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => moveLeaderboardMonth(-1),
+    title: "Previous month",
+    "aria-label": "Previous month"
+  }, "‹"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 600,
+      color: 'var(--text)'
+    },
+    "aria-live": "polite"
+  }, leaderboardMonthLabel), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => setLeaderboardMonth(today().slice(0, 7)),
+    title: "Current month",
+    "aria-label": "Current month"
+  }, "•"), /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: () => moveLeaderboardMonth(1),
+    title: "Next month",
+    "aria-label": "Next month"
+  }, "›"))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       alignItems: 'center',
@@ -3622,9 +3712,9 @@ function Dashboard({
     onClick: () => setAmView(v)
   }, v.charAt(0).toUpperCase() + v.slice(1)))))), amView === 'leaderboard' && /*#__PURE__*/React.createElement("div", {
     className: "leaderboard"
-  }, (dateFrom || dateTo) && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
     className: "leaderboard-filter-note"
-  }, "Demo Booked counts all-time (cohort basis); Done and Closed filter to selected range."), sortedAM.slice(0, 10).map((am, i) => /*#__PURE__*/React.createElement("div", {
+  }, "Monthly leaderboard for ", leaderboardMonthLabel, ". Demo Booked/Done/Closed are counted from event dates in this month."), sortedAM.slice(0, 10).map((am, i) => /*#__PURE__*/React.createElement("div", {
     key: am.name,
     className: "lb-row"
   }, /*#__PURE__*/React.createElement("div", {
