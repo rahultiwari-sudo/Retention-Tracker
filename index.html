@@ -634,6 +634,8 @@ const LAYER_A_MAP = {
   'CS Evaluation Score': 'CS Evaluation Score',
   'FINAL RETENTION SCORE': 'FINAL RETENTION SCORE',
   'Retention %': 'Retention %',
+  'Pricing Slab': 'Pricing Slab',
+  'Tier': 'Tier',
   'UPDATED TIERING': 'UPDATED TIERING',
   'CS Evaluation': 'CS Evaluation'
 };
@@ -878,7 +880,7 @@ function SidePanel({
     className: "panel-store"
   }, seller['Store Name']), /*#__PURE__*/React.createElement("div", {
     className: "panel-meta"
-  }, tierBadge(seller['UPDATED TIERING']), /*#__PURE__*/React.createElement("span", {
+  }, tierBadge(seller['Tier']), /*#__PURE__*/React.createElement("span", {
     className: "badge badge-gray"
   }, seller['Program']), /*#__PURE__*/React.createElement("span", {
     className: "badge badge-gray"
@@ -1427,6 +1429,7 @@ function SellerList({
   // Per-column search/filter state
   const [colSearch, setColSearch] = useState({
     storeName: '',
+    pricingSlab: 'All',
     tier: 'All',
     program: 'All',
     wos: '',
@@ -1472,7 +1475,8 @@ function SellerList({
     });
     return sellers;
   }, [sellers, role, userName, layerB, confirmedLayerB, pendingErrors, adminView]);
-  const tiers = useMemo(() => ['All', ...new Set(source.map(s => String(s['UPDATED TIERING'] || '').trim()).filter(Boolean).sort((a, b) => a.localeCompare(b)))], [source]);
+  const pricingSlabs = useMemo(() => ['All', ...new Set(source.map(s => String(s['Pricing Slab'] || '').trim()).filter(Boolean).sort((a, b) => a.localeCompare(b)))], [source]);
+  const tiers = useMemo(() => ['All', ...new Set(source.map(s => String(s['Tier'] || '').trim()).filter(Boolean).sort((a, b) => a.localeCompare(b)))], [source]);
   const teams = useMemo(() => ['All', ...new Set(source.map(s => s['Team Name']).filter(Boolean).sort())], [source]);
   const amNames = useMemo(() => ['All', ...new Set(source.map(s => s['AM Name']).filter(Boolean).sort())], [source]);
   useEffect(() => {
@@ -1489,7 +1493,8 @@ function SellerList({
       'Store Name': s['Store Name'] || '',
       'AM Name': s['AM Name'] || '',
       'Team Name': s['Team Name'] || '',
-      'Tier': s['UPDATED TIERING'] || '',
+      'Pricing Slab': s['Pricing Slab'] || '',
+      'Tier': s['Tier'] || '',
       'Program': s['Program'] || '',
       'WOS': Number(s['WOS']) || 0,
       'Connected?': b.connectedRetention || '—',
@@ -1509,7 +1514,8 @@ function SellerList({
     const c = colSearch;
     const ql = v => v.toLowerCase();
     if (c.storeName) list = list.filter(s => s['Store Name']?.toLowerCase().includes(ql(c.storeName)));
-    if (c.tier !== 'All') list = list.filter(s => String(s['UPDATED TIERING'] || '').trim() === c.tier);
+    if (c.pricingSlab !== 'All') list = list.filter(s => String(s['Pricing Slab'] || '').trim() === c.pricingSlab);
+    if (c.tier !== 'All') list = list.filter(s => String(s['Tier'] || '').trim() === c.tier);
     if (c.program !== 'All') list = list.filter(s => s['Program'] === c.program);
     if (c.wos) list = list.filter(s => String(s['WOS']).includes(c.wos));
     if (c.team !== 'All') list = list.filter(s => s['Team Name'] === c.team);
@@ -1574,6 +1580,7 @@ function SellerList({
   const clearFilters = () => {
     setColSearch({
       storeName: '',
+      pricingSlab: 'All',
       tier: 'All',
       program: 'All',
       wos: '',
@@ -1600,7 +1607,7 @@ function SellerList({
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
   const exportFilteredSellers = () => {
     const isSalesExport = role === 'sales' || role === 'admin' && adminView === 'sales';
-    const columns = role === 'am' ? [['Store Name', s => s['Store Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—']] : isSalesExport ? [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['Intent', (s, b) => b.intent || '—'], ['Amount Pitched', (s, b) => b.amountPitched || ''], ['Closure Amount', (s, b) => b.closureAmount || ''], ['Closure Duration', (s, b) => b.closureDuration || '—'], ['Payment Link', (s, b) => b.paymentLinkSent || '—'], ['Closure', (s, b) => b.closure || '—']] : [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Team Name', s => s['Team Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—'], ['Closure', (s, b) => b.closure || '—']];
+    const columns = role === 'am' ? [['Store Name', s => s['Store Name']], ['Pricing Slab', s => s['Pricing Slab']], ['Tier', s => s['Tier']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—']] : isSalesExport ? [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Pricing Slab', s => s['Pricing Slab']], ['Tier', s => s['Tier']], ['Program', s => s['Program']], ['Intent', (s, b) => b.intent || '—'], ['Amount Pitched', (s, b) => b.amountPitched || ''], ['Closure Amount', (s, b) => b.closureAmount || ''], ['Closure Duration', (s, b) => b.closureDuration || '—'], ['Payment Link', (s, b) => b.paymentLinkSent || '—'], ['Closure', (s, b) => b.closure || '—']] : [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Team Name', s => s['Team Name']], ['Pricing Slab', s => s['Pricing Slab']], ['Tier', s => s['Tier']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—'], ['Closure', (s, b) => b.closure || '—']];
     const csv = '\uFEFF' + [columns.map(([label]) => csvValue(label)).join(','), ...filtered.map(s => {
       const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
       return columns.map(([, getValue]) => csvValue(getValue(s, b))).join(',');
@@ -1629,6 +1636,16 @@ function SellerList({
       placeholder: "Search name..."
     })
   }, "Store Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Pricing Slab",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.pricingSlab,
+      onChange: v => updateCol('pricingSlab', v),
+      opts: pricingSlabs
+    })
+  }, "Pricing Slab"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Tier",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1706,7 +1723,9 @@ function SellerList({
       ...kbd(() => setSelected(s))
     }, /*#__PURE__*/React.createElement("td", {
       className: "name-cell"
-    }, s['Store Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+    }, s['Store Name']), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Pricing Slab'] || '—')), /*#__PURE__*/React.createElement("td", null, tierBadge(s['Tier'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: "badge badge-gray"
     }, s['Program'])), /*#__PURE__*/React.createElement("td", {
       style: {
@@ -1738,6 +1757,16 @@ function SellerList({
       opts: amNames
     })
   }, "AM Name"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Pricing Slab",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.pricingSlab,
+      onChange: v => updateCol('pricingSlab', v),
+      opts: pricingSlabs
+    })
+  }, "Pricing Slab"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Tier",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1829,7 +1858,9 @@ function SellerList({
       style: {
         color: 'var(--text3)'
       }
-    }, s['AM Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+    }, s['AM Name']), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Pricing Slab'] || '—')), /*#__PURE__*/React.createElement("td", null, tierBadge(s['Tier'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: "badge badge-gray"
     }, s['Program'])), /*#__PURE__*/React.createElement("td", null, intentBadge(b.intent)), /*#__PURE__*/React.createElement("td", {
       style: {
@@ -1880,6 +1911,16 @@ function SellerList({
       opts: teams
     })
   }, "Team"), /*#__PURE__*/React.createElement(SortableTh, {
+    col: "Pricing Slab",
+    sortKey: sortKey,
+    sortDir: sortDir,
+    onSort: onSort,
+    filterEl: /*#__PURE__*/React.createElement(ColSelect, {
+      value: colSearch.pricingSlab,
+      onChange: v => updateCol('pricingSlab', v),
+      opts: pricingSlabs
+    })
+  }, "Pricing Slab"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Tier",
     sortKey: sortKey,
     sortDir: sortDir,
@@ -1970,7 +2011,9 @@ function SellerList({
       style: {
         color: 'var(--text3)'
       }
-    }, s['Team Name']), /*#__PURE__*/React.createElement("td", null, tierBadge(s['UPDATED TIERING'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+    }, s['Team Name']), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "badge badge-gray"
+    }, s['Pricing Slab'] || '—')), /*#__PURE__*/React.createElement("td", null, tierBadge(s['Tier'])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
       className: "badge badge-gray"
     }, s['Program'])), /*#__PURE__*/React.createElement("td", {
       style: {
