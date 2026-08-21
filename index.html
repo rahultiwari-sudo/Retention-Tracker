@@ -390,7 +390,6 @@ const {
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const PROGRAMS = ['All', 'accelerate', 'elevatePlus'];
-const TIERS = ['All', 'Platinum', 'Gold', 'Silver', 'Bronze'];
 const DISPOSITION_OPTS = ['—', 'Not Responding', 'Call Later', 'Interested', 'Not Interested', 'Demo Booked'];
 const DEMO_STATUS_OPTS = ['—', 'Not Responding before Demo', 'Not Responding after Demo', 'Call Later', 'No Show', 'Requires Follow Up', 'Completed', 'Not Interested'];
 const INTENT_OPTS = ['—', 'Cold', 'Warm', 'Hot'];
@@ -1402,6 +1401,10 @@ function ColSelect({
 function hasMoney(v) {
   return String(v || '').trim() !== '' && String(v || '').trim() !== '—';
 }
+function csvValue(value) {
+  const text = String(value ?? '');
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
 function SellerList({
   sellers,
   layerB,
@@ -1469,8 +1472,17 @@ function SellerList({
     });
     return sellers;
   }, [sellers, role, userName, layerB, confirmedLayerB, pendingErrors, adminView]);
+  const tiers = useMemo(() => ['All', ...new Set(source.map(s => String(s['UPDATED TIERING'] || '').trim()).filter(Boolean).sort((a, b) => a.localeCompare(b)))], [source]);
   const teams = useMemo(() => ['All', ...new Set(source.map(s => s['Team Name']).filter(Boolean).sort())], [source]);
   const amNames = useMemo(() => ['All', ...new Set(source.map(s => s['AM Name']).filter(Boolean).sort())], [source]);
+  useEffect(() => {
+    if (colSearch.tier !== 'All' && !tiers.includes(colSearch.tier)) {
+      setColSearch(p => ({
+        ...p,
+        tier: 'All'
+      }));
+    }
+  }, [tiers, colSearch.tier]);
   const getCellVal = useCallback((s, key) => {
     const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
     const map = {
@@ -1497,7 +1509,7 @@ function SellerList({
     const c = colSearch;
     const ql = v => v.toLowerCase();
     if (c.storeName) list = list.filter(s => s['Store Name']?.toLowerCase().includes(ql(c.storeName)));
-    if (c.tier !== 'All') list = list.filter(s => s['UPDATED TIERING'] === c.tier);
+    if (c.tier !== 'All') list = list.filter(s => String(s['UPDATED TIERING'] || '').trim() === c.tier);
     if (c.program !== 'All') list = list.filter(s => s['Program'] === c.program);
     if (c.wos) list = list.filter(s => String(s['WOS']).includes(c.wos));
     if (c.team !== 'All') list = list.filter(s => s['Team Name'] === c.team);
@@ -1586,6 +1598,24 @@ function SellerList({
   };
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const exportFilteredSellers = () => {
+    const isSalesExport = role === 'sales' || role === 'admin' && adminView === 'sales';
+    const columns = role === 'am' ? [['Store Name', s => s['Store Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—']] : isSalesExport ? [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['Intent', (s, b) => b.intent || '—'], ['Amount Pitched', (s, b) => b.amountPitched || ''], ['Closure Amount', (s, b) => b.closureAmount || ''], ['Closure Duration', (s, b) => b.closureDuration || '—'], ['Payment Link', (s, b) => b.paymentLinkSent || '—'], ['Closure', (s, b) => b.closure || '—']] : [['Store Name', s => s['Store Name']], ['AM Name', s => s['AM Name']], ['Team Name', s => s['Team Name']], ['Tier', s => s['UPDATED TIERING']], ['Program', s => s['Program']], ['WOS', s => s['WOS']], ['Connected?', (s, b) => b.connectedRetention || '—'], ['Disposition', (s, b) => b.disposition || '—'], ['Demo Status', (s, b) => b.demoStatus || '—'], ['Intent', (s, b) => b.intent || '—'], ['Closure', (s, b) => b.closure || '—']];
+    const csv = '\uFEFF' + [columns.map(([label]) => csvValue(label)).join(','), ...filtered.map(s => {
+      const b = getDisplayLayerB(layerB, confirmedLayerB, pendingErrors, s['Advertiser ID']);
+      return columns.map(([, getValue]) => csvValue(getValue(s, b))).join(',');
+    })].join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], {
+      type: 'text/csv;charset=utf-8;'
+    }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'seller-list-filtered.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   // AM columns — no team/amName since AM sees only own
   const renderAMTable = () => /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement(SortableTh, {
@@ -1606,7 +1636,7 @@ function SellerList({
     filterEl: /*#__PURE__*/React.createElement(ColSelect, {
       value: colSearch.tier,
       onChange: v => updateCol('tier', v),
-      opts: TIERS
+      opts: tiers
     })
   }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Program",
@@ -1715,7 +1745,7 @@ function SellerList({
     filterEl: /*#__PURE__*/React.createElement(ColSelect, {
       value: colSearch.tier,
       onChange: v => updateCol('tier', v),
-      opts: TIERS
+      opts: tiers
     })
   }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Program",
@@ -1857,7 +1887,7 @@ function SellerList({
     filterEl: /*#__PURE__*/React.createElement(ColSelect, {
       value: colSearch.tier,
       onChange: v => updateCol('tier', v),
-      opts: TIERS
+      opts: tiers
     })
   }, "Tier"), /*#__PURE__*/React.createElement(SortableTh, {
     col: "Program",
@@ -2072,7 +2102,15 @@ function SellerList({
       alignItems: 'center',
       gap: 8
     }
-  }, /*#__PURE__*/React.createElement("span", {
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "btn btn-ghost btn-sm",
+    onClick: exportFilteredSellers,
+    disabled: filtered.length === 0,
+    title: "Download all sellers matching the current filters",
+    style: {
+      whiteSpace: 'nowrap'
+    }
+  }, "↓ Export CSV"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       color: 'var(--text3)'
